@@ -1,0 +1,40 @@
+name: Development deployment
+
+concurrency: backend-dev-ev
+
+# These actions happen whenever someone pushes or creates a pull request to the dev branch
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+      
+jobs:
+  dev-deployment:
+    runs-on: ubuntu-latest
+    environment: backend-dev-ev
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16.x
+
+    - name: Install dependencies and build
+      run: npm ci
+
+    # Connect to host using SSH key
+    - name: Deploy to A2 Hosting
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.SFTP_HOST }}
+        port: ${{ secrets.SFTP_PORT }}
+        username: ${{ secrets.SFTP_USERNAME }}
+        key: ${{ secrets.A2HOSTING_PRIVATE_KEY }}
+        passphrase: ${{ secrets.A2HOSTING_PRIVATE_KEY_PASSPHRASE }}
+        source: "./"
+        target: ${{ secrets.SFTP_API_DESTINATION_PATH_DEV }}
