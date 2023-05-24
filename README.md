@@ -20,9 +20,9 @@ The art portfolio website uses a PostgreSQL database to store information about 
 ### Tables
 #### `portfolio_images`: Stores information about each image in the portfolio.
 
-- `filename` (TEXT, PRIMARY KEY): The unique filename of the image.
+- `url` (TEXT, PRIMARY KEY): The url where the image is stored.
 - `description` (TEXT): A brief description of the image.
-- `alt_text` (TEXT): The alternative text for the image, used for accessibility purposes.
+- `alt_text` (TEXT): The alt text for the image, used for accessibility.
 
 #### `portfolio_tags`: Stores the unique tags used to categorize images in the portfolio.
 
@@ -31,7 +31,7 @@ The art portfolio website uses a PostgreSQL database to store information about 
 
 #### `portfolio_image_tags_assoc`: Association table that maps the relationships between images and their associated tags.
 
-- `filename` (TEXT, FOREIGN KEY referencing `portfolio_images.filename`): The filename of the image.
+- `url` (TEXT, FOREIGN KEY referencing `portfolio_images.filename`): The url location of the image.
 - `tag_id` (INTEGER, FOREIGN KEY referencing `portfolio_tags.tag_id`): The unique identifier of the tag.
 PRIMARY KEY (filename, tag_id)
 
