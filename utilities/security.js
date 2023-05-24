@@ -1,3 +1,5 @@
+const rateLimit = require('express-rate-limit');
+
 const JPG_TYPE = 'image/jpeg';
 const PNG_TYPE = 'image/png';
 const GIF_TYPE = 'image/gif';
@@ -54,12 +56,14 @@ const validateAPI = (req, res, next) => {
   next();
 };
 
-const rateLimit = () => {
-  // Empty shell for rateLimit. Will fill out later
-};
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests created from this IP, please try again after 15 minutes."
+});
 
 module.exports = {
   validateFileType,
-  rateLimit,
+  apiLimiter,
   validateAPI,
 };

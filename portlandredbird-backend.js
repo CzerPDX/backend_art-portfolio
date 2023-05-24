@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const { validateAPI } = require('./utilities/security');
+const { validateAPI, apiLimiter } = require('./utilities/security');
 
 const app = express();
 
@@ -10,6 +10,9 @@ const port = process.env.NODE_ENV === 'production' ? null : process.env.PORTFOLI
 
 //  Validate request's api key before proceeding
 app.use(validateAPI);
+
+// Use rate IP-based rate limiting
+app.use(apiLimiter);
 
 // Serve the Routes
 // Art Portfolio Routes
