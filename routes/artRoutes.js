@@ -7,7 +7,7 @@
 
 const express = require(`express`);
 const router = express.Router();
-const { Pool, Client } = require('pg')
+const { Pool } = require('pg')
 const { createTunnel } = require(`tunnel-ssh`);
 
 require(`dotenv`).config();
