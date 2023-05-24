@@ -1,16 +1,18 @@
 # backend-portlandredbird-v2
-New backend for portlandredbird.com. Runs on Node.js. Offers authorized access to backend services for frontend and admin tools.
+In-progress. A `Node.js` backend for the art portfolio at portlandredbird.com. Offers authorized access to backend services for use by frontend and admin tool clients.
 
-# Content Delivery Network (CDN)
-Cloudflare Integration: this project uses Cloudflare for improved performance, security, and reliability.
+## Website Routes
+A user must be authorized with an API key in the `x-api-key` field of the request header in order to use these routes.
+### /artRoutes
+Serves information about the art in the portfolio. The frontend can call these routes and get the following information about an image:
+- Image URL
+- Description
+- Alt Text
 
-## Main Routes
+### /upload
+Authorized users can upload images to the `PostgreSQL` database. Must include a description and alt text in the request.
 
-### Art Portfolio
-Get information about images in the portfolio.
-
-### Upload Images
-Authorized users can upload images to the database.
+Current iteration of the software overwrites images of the same name, but future iterations will provide response interface that allows the frontend to change the name or overwrite depending.
 
 ## Art Portfolio Database Structure
 The art portfolio website uses a PostgreSQL database to store information about images and their associated tags. The database has three tables: `portfolio_images`, `portfolio_tags`, and `portfolio_image_tags_assoc`.
