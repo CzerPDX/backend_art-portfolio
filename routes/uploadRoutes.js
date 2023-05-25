@@ -28,11 +28,11 @@ const uploadAsync = (req, res) => {
 };
 
 
-const sendImageToBucket = async (req, res) => {
+const sendImageToBucket = async (req) => {
   let form_data = new FormData();
   form_data.append('file', req.file.buffer, req.file.originalname);
 
-  res = await axios.put(process.env.ART_IMAGE_BUCKET_URL, form_data, {
+  return await axios.put(process.env.ART_IMAGE_BUCKET_URL, form_data, {
     headers: {
       'Content-Type': `multipart/form-data; boundary=${form_data._boundary}`,
       'x-api-key': process.env.ART_IMAGE_BUCKET_API_KEY,
@@ -60,7 +60,7 @@ router.put('/', async (req, res) => {
         }
         
         // Once validated, upload the file
-        const imageBucketResponse = sendImageToBucket(req, res);
+        const imageBucketResponse = await sendImageToBucket(req, res);
 
         // If image bucket responds positively the url will be included in the response at res.file.url
         // Send the url, filename, description, and alt text to the database
