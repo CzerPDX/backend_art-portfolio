@@ -68,7 +68,25 @@ const setupProductionPool = () => {
   });
 };
 
+const executeQuery = async (sqlQuery, params = []) => {
+  // Connect to the database
+  const pool = process.env.NODE_ENV === 'production' ? setupProductionPool() : await setupLocalPool();
+  
+  let responseObject;
+  try {
+    // Send the query to the database using the pool
+    const dbResponse = await pool.query(sqlQuery, params);
+    responseObject = dbResponse.rows;
+    pool.end();
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+
+  return responseObject;
+};
+
+
 module.exports = {
-  setupLocalPool,
-  setupProductionPool,
+  executeQuery
 };
