@@ -1,10 +1,11 @@
-const axios = require('axios');
 const multer = require('multer');
 const express = require(`express`);
 const router = express.Router();
-const FormData = require('form-data');
+const FILE_BUCKET = require('../utilities/file-bucket-sdk');
 
 require(`dotenv`).config();
+
+const easyStore = new FILE_BUCKET.EasyStore();
 
 const { validateFileType } = require('../utilities/security');
 
@@ -28,20 +29,6 @@ const uploadAsync = (req, res) => {
 };
 
 
-const sendImageToBucket = async (req) => {
-  let form_data = new FormData();
-  form_data.append('file', req.file.buffer, req.file.originalname);
-
-  return await axios.put(process.env.ART_IMAGE_BUCKET_URL, form_data, {
-    headers: {
-      'Content-Type': `multipart/form-data; boundary=${form_data._boundary}`,
-      'x-api-key': process.env.ART_IMAGE_BUCKET_API_KEY,
-      ...form_data.getHeaders(),
-    },
-  });
-};
-
-
 // Handle the upload
 router.put('/', async (req, res) => {
   try {
@@ -49,28 +36,36 @@ router.put('/', async (req, res) => {
     if (req.file) {
       // Validate that there is a description and alt text included in the req
       if ((!req.body.description) || (!req.body.alt_text)) {
-        return res.status(400).send({ message: 'Description and alt text must be included in the request.'})
+        const errMsg = `Description and alt text must be included in the request.`;
+        console.error(errMsg);
+        return res.status(400).send({ message: errMsg });
       }
 
       // If there is, then send the data to the image bucket and the database
       try {
         // Validate the fileType is an allowed one (JPG, PNG, GIF)
         if (!validateFileType(req.file.buffer)) {
-          return res.status(400).send({ message: 'Invalid file type.' });
+          const errMsg = `Invalid file type.`;
+          console.error(errMsg);
+          return res.status(400).send({ message: errMsg });
         }
         
         // Once validated, upload the file
-        const imageBucketResponse = await sendImageToBucket(req, res);
+        // Set parameters
+        const params = {
+          Bucket: 'art',
+          Key: req.file.originalname,
+          Body: req.file.buffer,
+        };
+        // Send the fileBucketResponse directly for now but this will need to change when db insert is added
+        const fileBucketResponse = await easyStore.upload(params);
 
-        // If image bucket responds positively the url will be included in the response at res.file.url
-        // Send the url, filename, description, and alt text to the database
+        res.status(200).send({ message: `Successfully uploaded: ${fileBucketResponse.data.Location}`});
 
-        // If the data was successfully sent to the database, reply with a 200 
-
-        res.send(imageBucketResponse.data);
       } catch (err) {
-        console.error('Error uploading the file:', err.message);
-        res.status(500).send({ message: 'An error occurred while uploading the file.' });
+        const errMsg = `Error uploading the file: ${err.Message}`;
+        console.error(errMsg);
+        res.status(500).send({ message: errMsg });
       }
     } else {
       res.status(400).send({ message: 'No file was included in the request to the backend.' });
@@ -78,10 +73,14 @@ router.put('/', async (req, res) => {
   } catch (err) {
     if (err instanceof multer.MulterError) {
       // A Multer error occurred when uploading.
-      res.status(500).send({ message: `Multer error: ${err.message}` });
+      const errMsg = `Multer error: ${err.message}`;
+      console.error(errMsg);
+      res.status(500).send({ message: errMsg });
     } else {
       // An unknown error occurred when uploading.
-      res.status(500).send({ message: `Unknown error: ${err.message}` });
+      const errMsg = `Unknown error: ${err.message}`;
+      console.error(errMsg);
+      res.status(500).send({ message: errMsg });
     }
   }
 });
