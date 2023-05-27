@@ -40,7 +40,6 @@ const checkFileType = (buffer) => {
 // Returns true or false based on whether the filetype is allowed
 const validateFileType = (incomingFile) => {
   const fileType = checkFileType(incomingFile);
-  console.log(`file type = ${fileType}`);
   return ALLOWED_FILETYPES.includes(fileType);
 };
 
