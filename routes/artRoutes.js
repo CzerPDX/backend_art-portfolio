@@ -9,6 +9,7 @@ const express = require(`express`);
 const router = express.Router();
 
 const { executeQuery } = require('../utilities/databaseUtils');
+const DBHandler = require('../utilities/dbHandler');
 
 require(`dotenv`).config();
 
@@ -16,18 +17,9 @@ require(`dotenv`).config();
 
 // Dynamic route to return images based on tag name
 router.get(`/tags/:tagName`, async (req, res) => {
+  const dbHandler = new DBHandler();
   try {
-    // Set up query
-    const query = `
-      SELECT pi.* 
-      FROM portfolio_images pi 
-      JOIN portfolio_image_tags_assoc pita ON pi.filename = pita.filename
-      JOIN portfolio_tags pt ON pt.tag_id = pita.tag_id
-      WHERE pt.tag_name = $1;
-    `;
-
-    // Send query and forward the response
-    res.send(await executeQuery(query, [req.params.tagName]));
+    res.send(await dbHandler.getAllImgsByTag(req.params.tagName));
   } catch (err) {
     console.error(err);
     res.status(500).send('An error occurred while retrieving the images.');

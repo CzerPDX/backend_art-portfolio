@@ -35,8 +35,8 @@ router.put('/', async (req, res) => {
     await uploadAsync(req, res);
     if (req.file) {
       // Validate that there is a description and alt text included in the req
-      if ((!req.body.description) || (!req.body.alt_text)) {
-        const errMsg = `Description and alt text must be included in the request.`;
+      if ((!req.body.description) || (!req.body.alt_text) || (!req.body.tags)) {
+        const errMsg = `Description, alt text, and tags must be included in the request.`;
         console.error(errMsg);
         return res.status(400).send({ message: errMsg });
       }
@@ -50,15 +50,28 @@ router.put('/', async (req, res) => {
           return res.status(400).send({ message: errMsg });
         }
         
-        // Once validated, upload the file
+        // Once validated, upload the file to the file bucket
         // Set parameters
         const params = {
           Bucket: process.env.BUCKET_NAME,
           Key: req.file.originalname,
           Body: req.file.buffer,
         };
-        // Send the fileBucketResponse directly for now but this will need to change when db insert is added
+        // Send the fileBucketResponse 
         const fileBucketResponse = await easyStore.upload(params);
+
+
+        // Set up query
+        const query = `
+        SELECT pi.* 
+        FROM portfolio_images pi 
+        JOIN portfolio_image_tags_assoc pita ON pi.filename = pita.filename
+        JOIN portfolio_tags pt ON pt.tag_id = pita.tag_id
+        WHERE pt.tag_name = $1;
+        `;
+
+        // Send query and forward the response
+        res.send(await executeQuery(query, [req.params.tagName]));
 
         res.status(200).send({ message: `Successfully uploaded: ${fileBucketResponse.data.Location}`});
 

@@ -87,6 +87,37 @@ const executeQuery = async (sqlQuery, params = []) => {
 };
 
 
+// Add a new tag to the db
+const addTagToDB = async (tagName) => {
+  // Add a new entry to portfolio_tags table
+};
+
+// Remove tag from db
+const removeTagFromDB = async (tagName) => {
+  // First remove entries from portfolio_image_tags_assoc for that tag
+  // Then remove the entry from the 
+  // When deleting a tag from the database it will not delete images that no longer have a tag associaterd
+};
+
+// List all images without a tag
+const getTaglessImgs = async (tagName) => {
+  // Get a list of all entries in portfolio_images that does not have any entries in portfolio_image_tags_assoc
+}
+
+const addImgToDB = async (url, filename, description, altText, tags) => {
+  // Make sure the tags requested exist in the portfolio_tags table. If not, send error
+
+  // Add the send the url, filename, description, and altText to the portfolio_images table
+  // Add the tag associations to portfolio_image_tags_assoc
+};
+
+const removeImgFromDB = async (filename) => {
+ // Remove the entry from portfolio_images table 
+ // Remove any entries in the portfolio_image_tags_assoc table
+};
+
+
+
 module.exports = {
   executeQuery
 };
