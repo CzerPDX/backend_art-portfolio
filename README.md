@@ -10,9 +10,13 @@ Serves information about the art in the portfolio. The frontend can call these r
 - Alt Text
 
 ### /upload
-Authorized users can upload images to the `PostgreSQL` database. Must include a description and alt text in the request.
+Authorized users can upload images to the file bucket and the details to the `PostgreSQL` database. Must include a description and alt text in the request.
 
 Current iteration of the software overwrites images of the same name, but future iterations will provide response interface that allows the frontend to change the name or overwrite depending.
+
+### /delete
+Authorized users can delete images from the 
+
 
 ## Art Portfolio Database Structure
 The art portfolio website uses a PostgreSQL database to store information about images and their associated tags. The database has three tables: `portfolio_images`, `portfolio_tags`, and `portfolio_image_tags_assoc`.
