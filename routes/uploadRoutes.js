@@ -53,7 +53,7 @@ router.put('/', async (req, res) => {
         // Once validated, upload the file
         // Set parameters
         const params = {
-          Bucket: 'art',
+          Bucket: process.env.BUCKET_NAME,
           Key: req.file.originalname,
           Body: req.file.buffer,
         };
