@@ -60,19 +60,6 @@ router.put('/', async (req, res) => {
         // Send the fileBucketResponse 
         const fileBucketResponse = await easyStore.upload(params);
 
-
-        // Set up query
-        const query = `
-        SELECT pi.* 
-        FROM portfolio_images pi 
-        JOIN portfolio_image_tags_assoc pita ON pi.filename = pita.filename
-        JOIN portfolio_tags pt ON pt.tag_id = pita.tag_id
-        WHERE pt.tag_name = $1;
-        `;
-
-        // Send query and forward the response
-        res.send(await executeQuery(query, [req.params.tagName]));
-
         res.status(200).send({ message: `Successfully uploaded: ${fileBucketResponse.data.Location}`});
 
       } catch (err) {

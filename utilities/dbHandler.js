@@ -2,11 +2,6 @@ const { Pool } = require('pg')
 const { createTunnel } = require(`tunnel-ssh`);
 
 class DBHandler {
-
-  constructor () {
-
-  }
-
   
   // public methods
 
@@ -43,7 +38,7 @@ class DBHandler {
     // Remove any entries in the portfolio_image_tags_assoc table
   }
 
-  // Get all images in the db
+  // Get all images reated to a certain tag name in the db
   async getAllImgsByTag(tagName) {
     try {
       // Set up query
@@ -57,6 +52,20 @@ class DBHandler {
   
       // Send query and forward the response
       return this.#executeQuery(query, [tagName]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).send('An error occurred while retrieving the images.');
+    }
+  }
+
+  // Get all images in the db
+  async getAllImgs() {
+    try {
+    // Set up query
+    const query = `SELECT * FROM portfolio_images`;
+  
+      // Send query and forward the response
+      return this.#executeQuery(query);
     } catch (err) {
       console.error(err);
       return res.status(500).send('An error occurred while retrieving the images.');
