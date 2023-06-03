@@ -8,6 +8,12 @@ const app = express();
 // In live environment the NODE_ENV will be set to "production"
 const port = process.env.NODE_ENV === 'production' ? null : process.env.PORTFOLIO_API_PORT;
 
+// Log all requests
+app.all('*', (req, res, next) => {
+  console.log(`${new Date().toString()}: Received ${req.method} request on ${req.path}`);
+  next();
+});
+
 //  Validate request's api key before proceeding
 app.use(validateAPI);
 
