@@ -26,17 +26,20 @@ class DBHandler {
 
   // Add a new tag to the database
   async addTagToDB(tagName) {
-    // Add a new entry to portfolio_tags table
+    // Adds a new tag to the portfolio_tags database
     try {
       // Set up query text
-      const allImagesQueryText = `SELECT * FROM portfolio_images`;
+      const addTagQueryText = `
+      INSERT INTO portfolio_tags (tag_name)
+      VALUES ('${tagName}')
+      `;
 
       // Create a new DBQuery object and execute it
-      const allImagesQuery = new DBQuery(allImagesQueryText);
-      await this.#executeQueries([allImagesQuery]);
+      const addTagQuery = new DBQuery(addTagQueryText);
+      await this.#executeQueries([addTagQuery]);
 
       // Send the response back out to the calling function
-      return allImagesQuery.rows
+      return addTagQuery.rows
 
     } catch (error) {
       console.error(error);
@@ -56,17 +59,17 @@ class DBHandler {
     // Returns all the tags currently in the database
     try {
       // Set up query text
-      const allTagsQueryText = `
-        SELECT tags.tag_name
-        FROM portfolio_tags tags
+      const allTagNamesQueryText = `
+      SELECT tags.tag_name
+      FROM portfolio_tags tags
       `;
 
       // Create a new DBQuery object and execute it
-      const allTagsQuery = new DBQuery(allTagsQueryText);
-      await this.#executeQueries([allTagsQuery]);
+      const allTagNamesQuery = new DBQuery(allTagNamesQueryText);
+      await this.#executeQueries([allTagNamesQuery]);
 
       // Send the response back out to the calling function
-      return allTagsQuery.rows
+      return allTagNamesQuery.rows
 
     } catch (error) {
       console.error(error);
@@ -80,7 +83,7 @@ class DBHandler {
 
 
   async addImgToDB(url, filename, description, altText, tags) {
-    // Make sure the tags requested exist in the portfolio_tags table. If not, send error
+    // Make sure the values in the tags parameter exist in the portfolio_tags table. If not, send error
 
     // Add the send the url, filename, description, and altText to the portfolio_images table
     // Add the tag associations to portfolio_image_tags_assoc
