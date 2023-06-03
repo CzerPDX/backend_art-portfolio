@@ -27,6 +27,21 @@ class DBHandler {
   // Add a new tag to the database
   async addTagToDB(tagName) {
     // Add a new entry to portfolio_tags table
+    try {
+      // Set up query text
+      const allImagesQueryText = `SELECT * FROM portfolio_images`;
+
+      // Create a new DBQuery object and execute it
+      const allImagesQuery = new DBQuery(allImagesQueryText);
+      await this.#executeQueries([allImagesQuery]);
+
+      // Send the response back out to the calling function
+      return allImagesQuery.rows
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
   async removeTagFromDB(tagName) {
@@ -36,18 +51,22 @@ class DBHandler {
   }
 
   // Get all current tags from the database
-  async listTagsInDB() {
+  // Returns an array of tag_name from the database
+  async listTagNamesInDB() {
     // Returns all the tags currently in the database
     try {
       // Set up query text
-      const allTagsQueryText = `SELECT * FROM portfolio_tags`;
+      const allTagsQueryText = `
+        SELECT tags.tag_name
+        FROM portfolio_tags tags
+      `;
 
       // Create a new DBQuery object and execute it
       const allTagsQuery = new DBQuery(allTagsQueryText);
       await this.#executeQueries([allTagsQuery]);
 
       // Send the response back out to the calling function
-      return allImagesQuery.dbResRows.rows
+      return allTagsQuery.rows
 
     } catch (error) {
       console.error(error);
@@ -78,16 +97,18 @@ class DBHandler {
     try {
       // Set up query text
       const imagesByTagNameQueryText = `
-        SELECT portfolioImages.* 
-        FROM portfolio_images portfolioImages 
-        JOIN portfolio_image_tags_assoc portfolioImagesta ON portfolioImages.filename = portfolioImagesta.filename
-        JOIN portfolio_tags pt ON pt.tag_id = portfolioImagesta.tag_id
-        WHERE pt.tag_name = $1;
+      SELECT images.*
+      FROM portfolio_tags tag
+      JOIN portfolio_image_tags_assoc assoc
+        ON tag.tag_name = '${tagName}'
+      JOIN portfolio_images images
+        ON images.filename = assoc.filename
+      WHERE tag.tag_id = assoc.tag_id
       `;
 
       // Create a new DBQuery object and execute it
-      const imagesByTagNameQuery = new DBQuery(imagesByTagNameQueryText, [tagName]);
-      const dbRes = await this.#executeQueries([imagesByTagNameQuery]);
+      const imagesByTagNameQuery = new DBQuery(imagesByTagNameQueryText);
+      await this.#executeQueries([imagesByTagNameQuery]);
 
       // Send the response back out to the calling function
       return imagesByTagNameQuery.rows;
@@ -99,7 +120,7 @@ class DBHandler {
   }
 
   // Get all images in the db
-  // Returns an array of rows from the portfolio_images table
+  // Returns an array of all rows in the portfolio_images table
   async getAllImgs() {
     try {
       // Set up query text
@@ -119,7 +140,7 @@ class DBHandler {
   }
 
 
-  // private methods
+  // Private methods
 
   // Set up a local database pool using SSH into webhosting server
   #setupLocalPool = () => {
@@ -197,7 +218,7 @@ class DBHandler {
   // Execute queries
   // If failure is encountered the query will be rolled back.
   // Expects an array of DBQuery objects
-  // Adds the response to each dbQuery
+  // Adds the rows from response to each dbQuery object given to it
   #executeQueries = async (dbQueries) => {
     let pool;
     let client;
