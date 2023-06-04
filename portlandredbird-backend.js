@@ -20,14 +20,15 @@ app.use(validateAPI);
 // Use rate IP-based rate limiting
 app.use(apiLimiter);
 
-// Serve the Routes
-// Art Portfolio Routes
-const artRoutes = require('./routes/artRoutes');
-app.use('/art', artRoutes);
+// Serve routes
 
-// Art Upload Routes
+// Upload Routes
 const uploadRoutes = require('./routes/uploadRoutes');
 app.use('/upload', uploadRoutes);
+
+// DB Routes
+const dbRoutes = require('./routes/dbRoutes');
+app.use('/db', dbRoutes);
 
 
 // Start the server
