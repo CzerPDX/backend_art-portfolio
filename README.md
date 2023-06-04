@@ -45,3 +45,4 @@ This database structure creates a many-to-many relationship between images and t
 
 # To Do
 [ ] - Query to get portfolio_image rows that do not have a filename listing in the assoc table. (orphans that will not show up on the site. Want to leave them in because it might be better for the user to be able to upload images and then associate them to tags later.)
+[ ] - Not currently utilizing connection pool correctly. Right now I create a new pool every time I make a query. This is temporary functionality and needs to be updated so that the DBHandler object creates the pool when it's constructed and it persists, but will need to think about how that means it should be used. Each route really only needs to make one query, so I will need to read about the best way to restructure the usage of DBHandler in the client so it can make use of a persistent pool (if possible with this structure).

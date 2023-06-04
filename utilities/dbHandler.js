@@ -24,22 +24,21 @@ class DBHandler {
 
   // Public Methods
 
-  // Add a new tag to the database
+  // Add a new tag to the portfolio_tags table
   async addTagToDB(tagName) {
-    // Adds a new tag to the portfolio_tags table
     try {
       // Set up query text
       const addTagQueryText = `
       INSERT INTO portfolio_tags (tag_name)
-      VALUES ('${tagName}')
+      VALUES ($1)
       `;
+      const addTagQueryParams = [tagName];
+      const addTagQuery = new DBQuery(addTagQueryText, addTagQueryParams);
 
-      // Create a new DBQuery object and execute it
-      const addTagQuery = new DBQuery(addTagQueryText);
       await this.#executeQueries([addTagQuery]);
 
       // Send the response back out to the calling function
-      return addTagQuery.rows
+      return true;
 
     } catch (error) {
       console.error(error);
@@ -47,29 +46,91 @@ class DBHandler {
     }
   }
 
-  // Removes a tag from the database
-  // When deleting a tag from the database it will not delete images that no longer have a tag associated with it.
+  // Adds a tag association to the portfolio_image_tags_assoc table
+  async addAssocToDB(filename, tagName) {
+    try {
+      // Set up query text
+      const addAssocQueryText = `
+      INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
+        SELECT $1, tags.tag_id
+        FROM portfolio_tags tags
+        WHERE tags.tag_name = $2
+      `;
+      const addAssocQueryParams = [filename, tagName];
+      const addAssocQuery = new DBQuery(addAssocQueryText);
+
+
+      await this.#executeQueries([addAssocQuery]);
+
+      // Return true if this is reached without error
+      return true;
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  // Removes a tag association from the 
+  async removeAssocFromDB(filename, tagName) {
+    try {
+      // Set up query text
+      const removeAssocQueryText = `
+      DELETE 
+      FROM portfolio_image_tags_assoc assoc
+      WHERE assoc.filename = $1
+      AND assoc.tag_id = (
+        SELECT tags.tag_id
+        FROM portfolio_tags tags
+        WHERE tags.tag_name = $2
+      )
+      `;
+      const removeAssocQueryParams = [filename, tagName]
+      const removeAssocQuery = new DBQuery(removeAssocQueryText, removeAssocQueryParams);
+
+      await this.#executeQueries([removeAssocQuery]);
+
+      // Return true if this is reached without error
+      return true;
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+  // Removes a tag from the portfolio_tags table
+  // It will also remove related entries from the portfolio_image_tags_assoc table
+  // If it succeeds it will return true
+  // If it fails it will throw an error
   async removeTagFromDB(tagName) {
-    
-    // Adds a new tag to the portfolio_tags table
     try {
       // Set up query text
 
-      // First remove entries from portfolio_image_tags_assoc for that tag
+      // First, remove tag entries from the portfolio_image_tags_assoc table associated with tagName
+      const removeAssocsQueryText = `
+      DELETE FROM portfolio_image_tags_assoc assoc
+      WHERE assoc.tag_id = (
+        SELECT tags.tag_id
+        FROM portfolio_tags tags
+        WHERE tags.tag_name = $1
+      )
+      `;
+      const removeAssocsQueryParams = [tagName];
+      const removeAssocsQuery = new DBQuery(removeAssocsQueryText, removeAssocsQueryParams);
 
-
-      // Then remove the entry from the portfolio_tags database
+      // Next, remove the entry from the portfolio_tags database for the tag
       const removeTagQueryText = `
       DELETE FROM portfolio_tags tags
-      WHERE tags.tag_name = '${tagName}'
+      WHERE tags.tag_name = $1
       `;
+      removeTagQueryParams = [tagName];
       const removeTagQuery = new DBQuery(removeTagQueryText);
 
 
-      await this.#executeQueries([removeTagQuery]);
+      await this.#executeQueries([removeAssocsQuery, removeTagQuery]);
 
-      // Send the response back out to the calling function
-      return addTagQuery.rows
+      // Return true if this is reached without error
+      return true;
 
     } catch (error) {
       console.error(error);
@@ -87,9 +148,8 @@ class DBHandler {
       SELECT tags.tag_name
       FROM portfolio_tags tags
       `;
-
-      // Create a new DBQuery object and execute it
       const allTagNamesQuery = new DBQuery(allTagNamesQueryText);
+
       await this.#executeQueries([allTagNamesQuery]);
 
       // Send the response back out to the calling function
