@@ -41,3 +41,7 @@ The art portfolio website uses a PostgreSQL database to store information about 
 PRIMARY KEY (filename, tag_id)
 
 This database structure creates a many-to-many relationship between images and tags, allowing each image to have multiple tags and each tag to be associated with multiple images. The image_tags table serves as a junction table that links images and tags, enabling efficient querying and management of the relationships between them.
+
+
+# To Do
+[ ] - Query to get portfolio_image rows that do not have a filename listing in the assoc table. (orphans that will not show up on the site. Want to leave them in because it might be better for the user to be able to upload images and then associate them to tags later.)

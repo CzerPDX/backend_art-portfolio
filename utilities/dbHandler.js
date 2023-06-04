@@ -26,7 +26,7 @@ class DBHandler {
 
   // Add a new tag to the database
   async addTagToDB(tagName) {
-    // Adds a new tag to the portfolio_tags database
+    // Adds a new tag to the portfolio_tags table
     try {
       // Set up query text
       const addTagQueryText = `
@@ -47,10 +47,34 @@ class DBHandler {
     }
   }
 
+  // Removes a tag from the database
+  // When deleting a tag from the database it will not delete images that no longer have a tag associated with it.
   async removeTagFromDB(tagName) {
-    // First remove entries from portfolio_image_tags_assoc for that tag
-    // Then remove the entry from the 
-    // When deleting a tag from the database it will not delete images that no longer have a tag associaterd
+    
+    // Adds a new tag to the portfolio_tags table
+    try {
+      // Set up query text
+
+      // First remove entries from portfolio_image_tags_assoc for that tag
+
+
+      // Then remove the entry from the portfolio_tags database
+      const removeTagQueryText = `
+      DELETE FROM portfolio_tags tags
+      WHERE tags.tag_name = '${tagName}'
+      `;
+      const removeTagQuery = new DBQuery(removeTagQueryText);
+
+
+      await this.#executeQueries([removeTagQuery]);
+
+      // Send the response back out to the calling function
+      return addTagQuery.rows
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
   // Get all current tags from the database
