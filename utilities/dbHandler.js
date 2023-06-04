@@ -57,7 +57,7 @@ class DBHandler {
         WHERE tags.tag_name = $2
       `;
       const addAssocQueryParams = [filename, tagName];
-      const addAssocQuery = new DBQuery(addAssocQueryText);
+      const addAssocQuery = new DBQuery(addAssocQueryText, addAssocQueryParams);
 
 
       await this.#executeQueries([addAssocQuery]);
@@ -123,8 +123,8 @@ class DBHandler {
       DELETE FROM portfolio_tags tags
       WHERE tags.tag_name = $1
       `;
-      removeTagQueryParams = [tagName];
-      const removeTagQuery = new DBQuery(removeTagQueryText);
+      const removeTagQueryParams = [tagName];
+      const removeTagQuery = new DBQuery(removeTagQueryText, removeTagQueryParams);
 
 
       await this.#executeQueries([removeAssocsQuery, removeTagQuery]);
@@ -187,14 +187,14 @@ class DBHandler {
       SELECT images.*
       FROM portfolio_tags tag
       JOIN portfolio_image_tags_assoc assoc
-        ON tag.tag_name = '${tagName}'
+        ON tag.tag_name = $1
       JOIN portfolio_images images
         ON images.filename = assoc.filename
       WHERE tag.tag_id = assoc.tag_id
       `;
+      const imagesByTagNameQueryParams = [tagName];
+      const imagesByTagNameQuery = new DBQuery(imagesByTagNameQueryText, imagesByTagNameQueryParams);
 
-      // Create a new DBQuery object and execute it
-      const imagesByTagNameQuery = new DBQuery(imagesByTagNameQueryText);
       await this.#executeQueries([imagesByTagNameQuery]);
 
       // Send the response back out to the calling function
@@ -212,9 +212,8 @@ class DBHandler {
     try {
       // Set up query text
       const allImagesQueryText = `SELECT * FROM portfolio_images`;
-
-      // Create a new DBQuery object and execute it
       const allImagesQuery = new DBQuery(allImagesQueryText);
+
       await this.#executeQueries([allImagesQuery]);
 
       // Send the response back out to the calling function
@@ -263,7 +262,6 @@ class DBHandler {
       });
 
       try {
-      
         // Set up the database connection now that the SSH tunnel has been established
         const pool = new Pool({
           user:       process.env.DB_UN,
