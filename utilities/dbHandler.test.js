@@ -3,17 +3,18 @@
 const dbHandler = require('./dbHandler');
 require('dotenv').config();
 
-test('Get all images from portfolio_images table', async () => {
+test('Add an image to the databas', async () => {
   const allImgsResult = await dbHandler.getAllImgs();
   expect(allImgsResult).toBeInstanceOf(Object);
 });
 
 test('Add and delete a tag from the portfolio_tags table', async () => {
   const tagName = 'dbHandler-test-tag';
-  let tagsInDB = await dbHandler.getAllTagNames();
+  const filename = 'a-test-filename.jpg';
 
   // Prep for testing 
   // Delete tag if it exists
+  let tagsInDB = await dbHandler.getAllTagNames();
   if (tagsInDB.includes(tagName)) {
     // Attempt to delete the tag
     await dbHandler.removeTagFromDB(tagName);
@@ -31,7 +32,22 @@ test('Add and delete a tag from the portfolio_tags table', async () => {
   tagsInDB = await dbHandler.getAllTagNames();
   expect(tagsInDB.includes(tagName)).toBe(true);
 
+  // Add image to datbaase
+    // First, verify it doesn't exist
+    let filenamesInDB = await dbHandler.getAllFilenames();
+    expect(filenamesInDB.includes(filename)).toBe(false);
+    // Add the file to the database
+    // Verify it does exist
+
+  // Add an association between tag and image
+    // Verify the tag and image aren't on the assoc table
+    // Associate them
+    // Verify they are associated
+
+  
   // Cleanup
+  // Delete association if it exists
+  // Delete image if it exists
   // Delete tag if it exists
   const removeTagResult = await dbHandler.removeTagFromDB(tagName);
   expect(typeof(removeTagResult)).toBe('boolean');
@@ -42,21 +58,6 @@ test('Add and delete a tag from the portfolio_tags table', async () => {
 
 });
 
-
-// test('Add and remove a test tag from portfolio_tags table', () => {
-
-//   // Verify that the tag exists
-//     // If tag already exist
-//       // Return error
-
-//     // If tag doesn't exist
-//       // Add the tag
-//       // Verify that it now exists
-//         // If it exists
-//           // Delete it for cleanup
-//         // If it doesn't exist
-//           // Return error
-// });
 
 
 // Close out the dbHandler after it's done being used

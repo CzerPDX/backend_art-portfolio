@@ -41,4 +41,15 @@ router.get(`/art/:tagName`, async (req, res) => {
   }
 });
 
+// Get all images by tag name
+// Dynamic route. Get all image data that has been tagged with tagName
+router.get(`/all-filenames`, async (req, res) => {
+  try {
+    res.send(await dbHandler.getAllFilenames());
+  } catch (err) {
+    console.error(`Failed to connect to database`, err);
+    res.status(500).send(`Failed to connect to database`);
+  }
+});
+
 module.exports = router;

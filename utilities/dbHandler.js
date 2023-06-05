@@ -33,8 +33,6 @@ class DBHandler {
     this.pool = null;
   }
 
-  
-
   cleanupHandler = async () => {
     if (this.pool) {
       this.pool.end();
@@ -51,7 +49,6 @@ class DBHandler {
       const addTagQueryText = `
       INSERT INTO portfolio_tags (tag_name)
       VALUES ($1)
-      RETURNING *
       `;
       const addTagQueryParams = [tagName];
       const addTagQuery = new DBQuery(addTagQueryText, addTagQueryParams);
@@ -76,7 +73,6 @@ class DBHandler {
         SELECT $1, tags.tag_id
         FROM portfolio_tags tags
         WHERE tags.tag_name = $2
-        RETURNING *
       `;
       const addAssocQueryParams = [filename, tagName];
       const addAssocQuery = new DBQuery(addAssocQueryText, addAssocQueryParams);
@@ -190,24 +186,77 @@ class DBHandler {
     }
   }
 
-
-  async addImgToDB(url, filename, description, altText, tags) {
+  async getAllFilenames() {
+    // Returns all the filenames currently in the database
     try {
-      // Make sure the values in the tags parameter exist in the portfolio_tags table. If not, send error
-      const tagsInDB = await this.getAllTagNames();
+      // Set up query text
+      const allFilenamesQueryText = `
+      SELECT images.filename
+      FROM portfolio_images images
+      `;
+      const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
 
-      // For each tag in the tags parameter, check to see if it exists in the database
-      for (let tagName in tags) {
-        if (!tagsInDB.includes(tagName)) {
-          const errMsg = `Error: ${tagName} is not in the database. Remove it from tags list or add it to the database and try your upload again.`;
-          console.error(errMsg);
-          throw (errMsg);
-        }
+      await this.#executeQueries([allFilenamesQuery]);
+
+      // Pull tag names out of object and into an array to be sent to client
+      const retArr = [];
+      for (let filename of  allFilenamesQuery.rows) {
+        retArr.push(filename.filename);
       }
 
+      // Send the tag names back out to the calling function
+      return retArr;
 
-      // Add the send the url, filename, description, and altText to the portfolio_images table
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+
+  async addImgToDB(filename, bucket_url, description, altText, tags) {
+    try {
+      // // Make sure the values in the tags parameter exist in the portfolio_tags table. If not, send error
+      // const tagsInDB = await this.getAllTagNames();
+      // const queries = [];
+
+      // // For each tag in the tags parameter, check to see if it exists in the database
+      // for (let tagName in tags) {
+      //   if (!tagsInDB.includes(tagName)) {
+      //     const errMsg = `Error: ${tagName} is not in the database. Remove it from tags list or add it to the database and try your upload again.`;
+      //     console.error(errMsg);
+      //     throw (errMsg);
+      //   }
+      // }
+
+      // Add the image to the database,
+      const addImageQueryText = `
+      INSERT INTO portfolio_images (filename, bucket_url, description, alt_text)
+      VALUES ($1, $2, $3, $4)
+      `;
+      const addImageQueryParams = [filename, bucket_url, description, alt_text];
+      const addImageQuery = new DBQuery(addImageQueryText, addImageQueryParams);
+
+      queries.push(addImageQuery);
+
       // Add the tag associations to portfolio_image_tags_assoc
+      for (let tagName of tags) {
+        const addAssocQueryText = `
+        INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
+        VALUES ($1, $2)
+        `;
+        const addAssocQueryParams = [filename, tagName];
+        const addAssocQuery = new DBQuery(addAssocQueryText, addAssocQueryParams);
+        queries.push(addAssocQuery);
+      }
+      
+
+      await this.#executeQueries(queries);
+
+      // Send the response back out to the calling function
+      return true;
+
+      
     } catch (error) {
       console.error(error);
       throw error;
@@ -387,7 +436,7 @@ class DBHandler {
         const dbRes = await client.query(dbQuery.queryText, dbQuery.params);
 
         // Log the result and save it in in the dbQuery object
-        console.log(dbRes.rows);
+        // console.log(dbRes.rows);
         dbQuery.rows = dbRes.rows;
       }
 
@@ -410,6 +459,7 @@ class DBHandler {
   };
 }
 
+// Create the dbHanderInstance so it can be used in 
 const dbHandlerInstance = new DBHandler();
 
 module.exports = dbHandlerInstance;
