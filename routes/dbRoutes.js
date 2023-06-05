@@ -5,13 +5,12 @@
 
 const express = require(`express`);
 const router = express.Router();
-const DBHandler = require('../utilities/dbHandler');
+const dbHandler = require('../utilities/dbHandler');
 
 require(`dotenv`).config();
 
 // Get all art image information in the database.
 router.get(`/all-art`, async (req, res) => {
-  const dbHandler = new DBHandler();
   try {
     res.send(await dbHandler.getAllImgs());
   } catch (err) {
@@ -22,7 +21,6 @@ router.get(`/all-art`, async (req, res) => {
 
 // Sends all tag names in portfolio_tags table as an array
 router.get(`/all-tags`, async (req, res) => {
-  const dbHandler = new DBHandler();
   try {
     res.send(await dbHandler.getAllTagNames());
   } catch (err) {
@@ -35,7 +33,6 @@ router.get(`/all-tags`, async (req, res) => {
 // Get all images by tag name
 // Dynamic route. Get all image data that has been tagged with tagName
 router.get(`/art/:tagName`, async (req, res) => {
-  const dbHandler = new DBHandler();
   try {
     res.send(await dbHandler.getAllImgsByTag(req.params.tagName));
   } catch (err) {

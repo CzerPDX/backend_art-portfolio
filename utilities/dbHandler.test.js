@@ -1,10 +1,7 @@
 // https://jestjs.io/docs/getting-started
 
-const DBHandler = require('./dbHandler');
+const dbHandler = require('./dbHandler');
 require('dotenv').config();
-
-// Use this database handler for tests so the pool can be shared between them
-const dbHandler = new DBHandler();
 
 test('Get all images from portfolio_images table', async () => {
   const allImgsResult = await dbHandler.getAllImgs();
@@ -20,7 +17,7 @@ test('Add and delete a tag from the portfolio_tags table', async () => {
   if (tagsInDB.includes(tagName)) {
     // Attempt to delete the tag
     await dbHandler.removeTagFromDB(tagName);
-    // Verify it does not exist
+    // Verify it no longer exists
     tagsInDB = await dbHandler.getAllTagNames();
     expect(tagsInDB.includes(tagName)).toBe(false);
   }
@@ -60,3 +57,7 @@ test('Add and delete a tag from the portfolio_tags table', async () => {
 //         // If it doesn't exist
 //           // Return error
 // });
+
+
+// Close out the dbHandler after it's done being used
+dbHandler.cleanupHandler();

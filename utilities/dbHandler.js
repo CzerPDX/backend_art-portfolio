@@ -20,6 +20,9 @@ class DBQuery {
     this.queryText = queryText;
     this.params = params;
     this.rows = [];
+    DBHandler.instance = this;
+
+    return DBHandler.instance;
   }
 }
 
@@ -29,6 +32,15 @@ class DBHandler {
   constructor() {
     this.pool = null;
   }
+
+  
+
+  cleanupHandler = async () => {
+    if (this.pool) {
+      this.pool.end();
+      console.log('Pool closed')
+    }
+  };
 
   // Public Methods
 
@@ -254,7 +266,7 @@ class DBHandler {
     }
   }
 
-  async getTaglessImgs(tagName) {
+  getTaglessImgs = async (tagName) => {
     // Get a list of all entries in portfolio_images that do not have any entries in portfolio_image_tags_assoc
   }
 
@@ -334,8 +346,13 @@ class DBHandler {
     }   
   };
 
-  #init = async () => {
-    this.pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
+  #setupHandler = async () => {
+    if (!this.pool) {
+      this.pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
+      console.log('Pool open');
+    } else {
+      console.error('Error: Pool already open');
+    }
   };
 
   // Execute queries
@@ -348,7 +365,7 @@ class DBHandler {
     try {
       // Make sure the database connection pool is set up then set up the client
       if (!this.pool) {
-        await this.#init();
+        await this.#setupHandler();
       }
       client = await this.pool.connect();
     } catch (error) {
@@ -393,4 +410,6 @@ class DBHandler {
   };
 }
 
-module.exports = DBHandler;
+const dbHandlerInstance = new DBHandler();
+
+module.exports = dbHandlerInstance;

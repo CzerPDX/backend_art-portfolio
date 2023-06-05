@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const { validateAPI, apiLimiter } = require('./utilities/security');
 
+// Singleton for the database handler
+const dbHandler = require('./utilities/dbHandler'); 
+
 const app = express();
 
 // Figure out the port
@@ -34,4 +37,10 @@ app.use('/db', dbRoutes);
 // Start the server
 app.listen(port, () => {
   console.log(`Server started on port ${port ? port : 'assigned by A2 Hosting'}...`);
+});
+
+
+process.on('SIGTERM', async () => {
+  await dbHandler.cleanupHandler();
+  console.log('SIGTERM REACHED.');
 });
