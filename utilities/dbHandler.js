@@ -214,11 +214,11 @@ class DBHandler {
   }
 
 
-  async addImgToDB(filename, bucket_url, description, altText, tags) {
+  async addImgToDB(filename, bucketUrl, description, altText, tags) {
     try {
       // // Make sure the values in the tags parameter exist in the portfolio_tags table. If not, send error
       // const tagsInDB = await this.getAllTagNames();
-      // const queries = [];
+      const queries = [];
 
       // // For each tag in the tags parameter, check to see if it exists in the database
       // for (let tagName in tags) {
@@ -234,7 +234,7 @@ class DBHandler {
       INSERT INTO portfolio_images (filename, bucket_url, description, alt_text)
       VALUES ($1, $2, $3, $4)
       `;
-      const addImageQueryParams = [filename, bucket_url, description, alt_text];
+      const addImageQueryParams = [filename, bucketUrl, description, altText];
       const addImageQuery = new DBQuery(addImageQueryText, addImageQueryParams);
 
       queries.push(addImageQuery);
@@ -243,7 +243,9 @@ class DBHandler {
       for (let tagName of tags) {
         const addAssocQueryText = `
         INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
-        VALUES ($1, $2)
+          SELECT $1, tags.tag_id
+          FROM portfolio_tags tags
+          WHERE tags.tag_name = $2;
         `;
         const addAssocQueryParams = [filename, tagName];
         const addAssocQuery = new DBQuery(addAssocQueryText, addAssocQueryParams);
