@@ -8,7 +8,7 @@ test('Add an image to the databas', async () => {
   expect(allImgsResult).toBeInstanceOf(Object);
 });
 
-test('Add and delete a tag from the portfolio_tags table', async () => {
+test('Add and delete an image from the portfolio_image table', async () => {
   const tagName = 'dbHandler-test-tag';
   const filename = 'a-test-filename.jpg';
   const bucketUrl = 'atestbucketur.com';
@@ -27,6 +27,9 @@ test('Add and delete a tag from the portfolio_tags table', async () => {
     tagsInDB = await dbHandler.getAllTagNames();
     expect(tagsInDB.includes(tagName)).toBe(false);
   }
+  // Delete Image if it exists
+  // Delete association if it exists
+  
 
   // Conduct Testing
   // Add tag to table

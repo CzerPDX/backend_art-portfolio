@@ -43,7 +43,7 @@ class DBHandler {
   // Public Methods
 
   // Add a new tag to the portfolio_tags table
-  async addTagToDB(tagName) {
+  addTagToDB = async (tagName) => {
     try {
       // Set up query text
       const addTagQueryText = `
@@ -65,7 +65,7 @@ class DBHandler {
   }
 
   // Adds a tag association to the portfolio_image_tags_assoc table
-  async addAssocToDB(tagName, filename) {
+  addAssocToDB = async (tagName, filename) => {
     try {
       // Set up query text
       const addAssocQueryText = `
@@ -89,7 +89,7 @@ class DBHandler {
   }
 
   // Removes a tag association from the 
-  async removeAssocFromDB(tagName, filename) {
+  removeAssocFromDB = async (tagName, filename) => {
     try {
       // Set up query text
       const removeAssocQueryText = `
@@ -121,7 +121,7 @@ class DBHandler {
   // It will also remove related tag entries from the portfolio_image_tags_assoc table
   // If it succeeds it will return true
   // If it fails it will throw an error
-  async removeTagFromDB(tagName) {
+  removeTagFromDB = async (tagName) => {
     try {
       // Set up query text and parameters for both required queries
 
@@ -159,7 +159,7 @@ class DBHandler {
 
   // Get all current tags from the database
   // Returns an array of tag_name from the database
-  async getAllTagNames() {
+  getAllTagNames = async () => {
     // Returns all the tags currently in the database
     try {
       // Set up query text
@@ -186,7 +186,7 @@ class DBHandler {
     }
   }
 
-  async getAllFilenames() {
+  getAllFilenames = async () => {
     // Returns all the filenames currently in the database
     try {
       // Set up query text
@@ -214,7 +214,7 @@ class DBHandler {
   }
 
 
-  async addImgToDB(filename, bucketUrl, description, altText, tags) {
+  addImgToDB = async (filename, bucketUrl, description, altText, tags) => {
     try {
       // // Make sure the values in the tags parameter exist in the portfolio_tags table. If not, send error
       // const tagsInDB = await this.getAllTagNames();
@@ -251,7 +251,6 @@ class DBHandler {
         const addAssocQuery = new DBQuery(addAssocQueryText, addAssocQueryParams);
         queries.push(addAssocQuery);
       }
-      
 
       await this.#executeQueries(queries);
 
@@ -265,14 +264,18 @@ class DBHandler {
     }
   }
 
-  async removeImgFromDB(filename) {
+  addImageQuery = (filename, bucketUrl, description, altText) => {
+
+  }
+
+  removeImgFromDB = async (filename) => {
     // Remove the entry from portfolio_images table 
     // Remove any entries in the portfolio_image_tags_assoc table
   }
 
   // Get all images reated to a certain tag name in the db
   // Returns an array of portfolio_images rows matching the tagName parameter
-  async getAllImgsByTag(tagName) {
+  getAllImgsByTag = async (tagName) => {
     try {
       // Set up query text
       const imagesByTagNameQueryText = `
@@ -300,7 +303,7 @@ class DBHandler {
 
   // Get all images in the db
   // Returns an array of all rows in the portfolio_images table
-  async getAllImgs() {
+  getAllImgs = async () => {
     try {
       // Set up query text
       const allImagesQueryText = `SELECT * FROM portfolio_images`;
