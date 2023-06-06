@@ -30,7 +30,7 @@ class DBHandler {
     this.pool = null;
   }
 
-  cleanupHandler = async () => {
+  cleanupHandler = () => {
     if (this.pool) {
       this.pool.end();
       console.log('Pool closed')

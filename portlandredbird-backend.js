@@ -41,6 +41,6 @@ app.listen(port, () => {
 
 
 process.on('SIGTERM', async () => {
-  await dbHandler.cleanupHandler();
+  dbHandler.cleanupHandler();
   console.log('SIGTERM REACHED.');
 });
