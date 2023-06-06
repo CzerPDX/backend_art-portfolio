@@ -77,8 +77,8 @@ class DBHandler {
       return true;
 
     } catch (error) {
-      // console.error(error);
-      throw error;
+      console.error(error);
+      return false;
     }
   }
 
@@ -113,8 +113,8 @@ class DBHandler {
       return true;
 
     } catch (error) {
-      // console.error(error);
-      throw error;
+      console.error(error);
+      return false;
     }
   }
 
@@ -143,7 +143,7 @@ class DBHandler {
 
     } catch (error) {
       console.error(error);
-      throw error;
+      return false;
     }
   }
 
@@ -154,8 +154,8 @@ class DBHandler {
       return true;
 
     } catch (error) {
-      // console.error(error);
-      throw error;
+      console.error(error);
+      return false;
     }
   }
 
@@ -182,8 +182,8 @@ class DBHandler {
       return true;
 
     } catch (error) {
-      // console.error(error);
-      throw error;
+      console.error(error);
+      return false;
     }
   }
 
@@ -206,7 +206,7 @@ class DBHandler {
 
     } catch (error) {
       console.error(error);
-      throw error;
+      return false;
     }
   }
 
@@ -239,7 +239,7 @@ class DBHandler {
 
     } catch (error) {
       console.error(error);
-      throw error;
+      return false;
     }
   }
   
@@ -271,7 +271,7 @@ class DBHandler {
 
     } catch (error) {
       console.error(error);
-      throw error;
+      return false;
     }
   }
 
