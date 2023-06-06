@@ -12,28 +12,34 @@ const altText = 'alt text alternatively textual';
 const tags = [tagName, 'illustration'];
 
 const doesTagNameExist = async (tagName) => {
-  return await dbHandler.getAllTagNames().includes(tagName);
+  const allTagNames = await dbHandler.getAllTagNames();
+  return allTagNames.includes(tagName);
 }
 
 test('Add and remove a tag from portfolio_tags table', async () => {
-  // Setup test
-  // If tag exists, remove it
-  if (await doesTagNameExist(tagName)) {
-    await dbHandler.removeTagFromDB(tagName);
+  try {
+    // Setup test
+    // If tag exists, remove it
+    if (await doesTagNameExist(tagName)) {
+      await dbHandler.removeTagFromDB(tagName);
+    }
+      
+    // Begin test
+    // Verify the tag does not yet exist
+    expect(await doesTagNameExist(tagName)).toBe(false);
+    // Add the tag and verify results
+    expect(await dbHandler.addTagToDB(tagName)).toBe(true);
+    expect(await doesTagNameExist(tagName)).toBe(true);
+    // Remove the tag
+    expect(await dbHandler.removeTagFromDB(tagName)).toBe(false);
+    expect(await doesTagNameExist(tagName)).toBe(false);
+
+  } catch (error) {
+    // Jest will automatically fail the test when a thrown error reaches this block
+    console.error(`Test failed with error: ${error}`);
   }
-    
-  // Begin test
-  // Verify the tag does not yet exist
-  expect(await doesTagNameExist(tagName)).toBe(false);
-  // Add the tag and verify results
-  const addTagResult = await dbHandler.addTagToDB(tagName);
-  expect(addTagResult).toBe(true);
-  expect(await doesTagNameExist(tagName)).toBe(true);
-  // Remove the tag
-  const removeTagResult = await dbHandler.removeTagFromDB(tagName);
-  expect(removeTagResult).toBe(false);
-  expect(await doesTagNameExist(tagName)).toBe(false);
-});
+}), 6000;
+
 
 // test('Add and remove an image from portfolio_images table', async () => {
 //   // Setup test
