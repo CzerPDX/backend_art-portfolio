@@ -170,7 +170,7 @@ class DBHandler {
 
   // Add an image to the portfolio_images table
   // Also adds entries to assoc table for the filename any tags are provided
-  addimageToDB = async (filename, bucketUrl, description, altText, tags = []) => {
+  addImageToDB = async (filename, bucketUrl, description, altText, tags = []) => {
     try {
       // Set up queries
       const queries = [];
@@ -182,7 +182,7 @@ class DBHandler {
       const addImageQueryParams = [filename, bucketUrl, description, altText];
       const addImageQuery = new DBQuery(addImageQueryText, addImageQueryParams);
       // Add the query to the queries list
-      queries.push(addImageQuery(filename, bucketUrl, description, altText));
+      queries.push(addImageQuery);
 
       // Add a query to the queries list for each the filename-tag associations for this image
       for (let tagName of tags) {
@@ -209,7 +209,7 @@ class DBHandler {
 
       // Remove all entries for the filename parameter from the assoc table
       const removeAssocByFilenameQueryText = `
-      DELETE FROM portfolio_image_tag_assoc assoc
+      DELETE FROM portfolio_image_tags_assoc assoc
       WHERE assoc.filename = $1`;
       const removeAssocByFilenameQueryParams = [filename];
       const removeAssocByFilenameQuery = new DBQuery(removeAssocByFilenameQueryText, removeAssocByFilenameQueryParams);
