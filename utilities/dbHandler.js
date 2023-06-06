@@ -20,9 +20,6 @@ class DBQuery {
     this.queryText = queryText;
     this.params = params;
     this.rows = [];
-    DBHandler.instance = this;
-
-    return DBHandler.instance;
   }
 }
 
@@ -45,7 +42,6 @@ class DBHandler {
   // Add a new tag to the portfolio_tags table
   addTagToDB = async (tagName) => {
     try {
-      // Set up query text
       const addTagQueryText = `
       INSERT INTO portfolio_tags (tag_name)
       VALUES ($1)
@@ -64,69 +60,15 @@ class DBHandler {
     }
   }
 
-  // Adds a tag association to the portfolio_image_tags_assoc table
-  addAssocToDB = async (tagName, filename) => {
-    try {
-      // Set up query text
-      const addAssocQueryText = `
-      INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
-        SELECT $1, tags.tag_id
-        FROM portfolio_tags tags
-        WHERE tags.tag_name = $2
-      `;
-      const addAssocQueryParams = [filename, tagName];
-      const addAssocQuery = new DBQuery(addAssocQueryText, addAssocQueryParams);
-
-
-      await this.#executeQueries([addAssocQuery]);
-
-      return true;
-
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  }
-
-  // Removes a tag association from the 
-  removeAssocFromDB = async (tagName, filename) => {
-    try {
-      // Set up query text
-      const removeAssocQueryText = `
-      DELETE 
-      FROM portfolio_image_tags_assoc assoc
-      WHERE assoc.filename = $1
-      AND assoc.tag_id = (
-        SELECT tags.tag_id
-        FROM portfolio_tags tags
-        WHERE tags.tag_name = $2
-      )
-      `;
-      const removeAssocQueryParams = [filename, tagName]
-      const removeAssocQuery = new DBQuery(removeAssocQueryText, removeAssocQueryParams);
-
-      await this.#executeQueries([removeAssocQuery]);
-
-      // Return true if this is reached without error
-      return true;
-
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  }
-
-
   // Removes a tag from the portfolio_tags table
   // It will also remove related tag entries from the portfolio_image_tags_assoc table
-  // If it succeeds it will return true
-  // If it fails it will throw an error
+  // If it succeeds it will return true. Failure will throw an error
   removeTagFromDB = async (tagName) => {
     try {
       // Set up query text and parameters for both required queries
 
       // First, remove tag entries from the portfolio_image_tags_assoc table associated with tagName
-      const removeAssocsQueryText = `
+      const removeAssocsByTagQueryText = `
       DELETE FROM portfolio_image_tags_assoc assoc
       WHERE assoc.tag_id = (
         SELECT tags.tag_id
@@ -134,8 +76,8 @@ class DBHandler {
         WHERE tags.tag_name = $1
       )
       `;
-      const removeAssocsQueryParams = [tagName];
-      const removeAssocsQuery = new DBQuery(removeAssocsQueryText, removeAssocsQueryParams);
+      const removeAssocsByTagQueryParams = [tagName];
+      const removeAssocsByTagQuery = new DBQuery(removeAssocsByTagQueryText, removeAssocsByTagQueryParams);
 
       // Next, remove the entry from the portfolio_tags database for the tag
       const removeTagQueryText = `
@@ -145,7 +87,7 @@ class DBHandler {
       const removeTagQueryParams = [tagName];
       const removeTagQuery = new DBQuery(removeTagQueryText, removeTagQueryParams);
       
-      await this.#executeQueries([removeAssocsQuery, removeTagQuery]);
+      await this.#executeQueries([removeAssocsByTagQuery, removeTagQuery]);
 
       // Return true if this is reached without error
       return true;
@@ -155,6 +97,8 @@ class DBHandler {
       throw error;
     }
   }
+
+  
 
 
   // Get all current tags from the database
@@ -186,26 +130,39 @@ class DBHandler {
     }
   }
 
-  getAllFilenames = async () => {
-    // Returns all the filenames currently in the database
+  // Adds a tag association to the assoc table
+  addAssocToDB = async (tagName, filename) => {
+    try {
+      await this.#executeQueries([this.#addAssocQuery(filename, tagName)]);
+      return true;
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  // Removes a tag association from the assoc table
+  removeAssocFromDB = async (tagName, filename) => {
     try {
       // Set up query text
-      const allFilenamesQueryText = `
-      SELECT images.filename
-      FROM portfolio_images images
+      const removeAssocQueryText = `
+      DELETE 
+      FROM portfolio_image_tags_assoc assoc
+      WHERE assoc.filename = $1
+      AND assoc.tag_id = (
+        SELECT tags.tag_id
+        FROM portfolio_tags tags
+        WHERE tags.tag_name = $2
+      )
       `;
-      const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
+      const removeAssocQueryParams = [filename, tagName]
+      const removeAssocQuery = new DBQuery(removeAssocQueryText, removeAssocQueryParams);
 
-      await this.#executeQueries([allFilenamesQuery]);
+      await this.#executeQueries([removeAssocQuery]);
 
-      // Pull tag names out of object and into an array to be sent to client
-      const retArr = [];
-      for (let filename of  allFilenamesQuery.rows) {
-        retArr.push(filename.filename);
-      }
-
-      // Send the tag names back out to the calling function
-      return retArr;
+      // Return true if this is reached without error
+      return true;
 
     } catch (error) {
       console.error(error);
@@ -214,49 +171,22 @@ class DBHandler {
   }
 
 
-  addImgToDB = async (filename, bucketUrl, description, altText, tags) => {
+  addimageToDB = async (filename, bucketUrl, description, altText, tags) => {
     try {
-      // // Make sure the values in the tags parameter exist in the portfolio_tags table. If not, send error
-      // const tagsInDB = await this.getAllTagNames();
-      const queries = [];
+      const queries = [];       // Queries we will be sending to database
 
-      // // For each tag in the tags parameter, check to see if it exists in the database
-      // for (let tagName in tags) {
-      //   if (!tagsInDB.includes(tagName)) {
-      //     const errMsg = `Error: ${tagName} is not in the database. Remove it from tags list or add it to the database and try your upload again.`;
-      //     console.error(errMsg);
-      //     throw (errMsg);
-      //   }
-      // }
+      // Add the query to add the row to the portfolio_images db
+      queries.push(this.#addImageQuery(filename, bucketUrl, description, altText));
 
-      // Add the image to the database,
-      const addImageQueryText = `
-      INSERT INTO portfolio_images (filename, bucket_url, description, alt_text)
-      VALUES ($1, $2, $3, $4)
-      `;
-      const addImageQueryParams = [filename, bucketUrl, description, altText];
-      const addImageQuery = new DBQuery(addImageQueryText, addImageQueryParams);
-
-      queries.push(addImageQuery);
-
-      // Add the tag associations to portfolio_image_tags_assoc
+      // Add the tag associations to portfolio_image_tags_assoc for every tag given
       for (let tagName of tags) {
-        const addAssocQueryText = `
-        INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
-          SELECT $1, tags.tag_id
-          FROM portfolio_tags tags
-          WHERE tags.tag_name = $2;
-        `;
-        const addAssocQueryParams = [filename, tagName];
-        const addAssocQuery = new DBQuery(addAssocQueryText, addAssocQueryParams);
-        queries.push(addAssocQuery);
+        queries.push(this.#addAssocQuery(filename, tagName));
       }
 
       await this.#executeQueries(queries);
 
-      // Send the response back out to the calling function
+      // Send the response back out to the calling function if we got here without error
       return true;
-
       
     } catch (error) {
       console.error(error);
@@ -264,18 +194,65 @@ class DBHandler {
     }
   }
 
-  addImageQuery = (filename, bucketUrl, description, altText) => {
+  
+  removeImageFromDB = async (filename) => {
+    try {
+      // Setup queries
+
+      // Remove the entry from portfolio_images table 
+      const removeImageQueryText = `
+        DELETE FROM portfolio_images image
+        WHERE image.filename = $1
+        `;
+        const removeImageQueryParams = [filename];
+        const removeImageQuery = new DBQuery(removeImageQueryText, removeImageQueryParams);
+
+      // Remove any entries in the portfolio_image_tags_assoc table
+      // Remove the entry from portfolio_images table 
+      const removeAssocByFilenameQueryText = `
+        DELETE FROM portfolio_image_tag_assoc assoc
+        WHERE assoc.filename = $1
+        `;
+        const removeAssocByFilenameQueryParams = [filename];
+        const removeAssocByFilenameQuery = new DBQuery(removeAssocByFilenameQueryText, removeAssocByFilenameQueryParams);
+
+        await this.#executeQueries(removeImageQuery, removeAssocByFilenameQuery);
+
+        // Send the response back out to the calling function if we got here without error
+        return true;
+        
+      } catch (error) {
+        console.error(error);
+        throw error;
+      }
 
   }
 
-  removeImgFromDB = async (filename) => {
-    // Remove the entry from portfolio_images table 
-    // Remove any entries in the portfolio_image_tags_assoc table
+  
+
+  // Get all images in the db
+  // Returns an array of all rows in the portfolio_images table
+  getAllimages = async () => {
+    try {
+      // Set up query text
+      const allImagesQueryText = `SELECT * FROM portfolio_images`;
+      const allImagesQuery = new DBQuery(allImagesQueryText);
+
+      await this.#executeQueries([allImagesQuery]);
+
+      // Send the response back out to the calling function
+      return allImagesQuery.rows
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
+
 
   // Get all images reated to a certain tag name in the db
   // Returns an array of portfolio_images rows matching the tagName parameter
-  getAllImgsByTag = async (tagName) => {
+  getAllimagesByTag = async (tagName) => {
     try {
       // Set up query text
       const imagesByTagNameQueryText = `
@@ -300,19 +277,28 @@ class DBHandler {
       throw error;
     }
   }
+  
 
-  // Get all images in the db
-  // Returns an array of all rows in the portfolio_images table
-  getAllImgs = async () => {
+  // Returns all entries in the filenames column from the portfolio_images table
+  getAllFilenames = async () => {
     try {
       // Set up query text
-      const allImagesQueryText = `SELECT * FROM portfolio_images`;
-      const allImagesQuery = new DBQuery(allImagesQueryText);
+      const allFilenamesQueryText = `
+      SELECT images.filename
+      FROM portfolio_images images
+      `;
+      const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
 
-      await this.#executeQueries([allImagesQuery]);
+      await this.#executeQueries([allFilenamesQuery]);
 
-      // Send the response back out to the calling function
-      return allImagesQuery.rows
+      // Pull tag names out of object and into an array to be sent to client
+      const retArr = [];
+      for (let filenameRow of  allFilenamesQuery.rows) {
+        retArr.push(filenameRow.filename);
+      }
+
+      // Send the tag names back out to the calling function
+      return retArr;
 
     } catch (error) {
       console.error(error);
@@ -320,13 +306,42 @@ class DBHandler {
     }
   }
 
-  getTaglessImgs = async (tagName) => {
+  getTaglessimages = async (tagName) => {
     // Get a list of all entries in portfolio_images that do not have any entries in portfolio_image_tags_assoc
   }
 
 
-
   // Private methods
+
+  // Reused Queries
+  // These methods return DBQuery objects so they can be used repeatedly throughout DBHandler as they are called
+  // more than once. If new methods recreate existing queries they should be added here instead and called in both places
+
+  // Add to association table
+  #addAssocQuery = (filename, tagName) => {
+    const addAssocQueryText = `
+    INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
+      SELECT $1, tags.tag_id
+      FROM portfolio_tags tags
+      WHERE tags.tag_name = $2;
+    `;
+    const addAssocQueryParams = [filename, tagName];
+    return new DBQuery(addAssocQueryText, addAssocQueryParams);
+  }
+  
+  // Add to portfolio_images table
+  #addImageQuery = (filename, bucketUrl, description, altText) => {
+    const addImageQueryText = `
+      INSERT INTO portfolio_images (filename, bucket_url, description, alt_text)
+      VALUES ($1, $2, $3, $4)
+      `;
+      const addImageQueryParams = [filename, bucketUrl, description, altText];
+      return new DBQuery(addImageQueryText, addImageQueryParams);
+  }
+
+
+  // Database connection and executeQuery functions
+  // These methods handle the pool setup and connection to the database
 
   // Set up a local database pool using SSH into webhosting server
   #setupLocalPool = () => {
@@ -383,7 +398,7 @@ class DBHandler {
     });
   };
 
-  // Set up a production database pool for production on webhost server
+  // Set up a database pool for production on webhost server
   #setupProductionPool = () => {
     try {
       return new Pool({
@@ -400,6 +415,7 @@ class DBHandler {
     }   
   };
 
+  // Setup the pool
   #setupHandler = async () => {
     if (!this.pool) {
       this.pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
@@ -410,9 +426,7 @@ class DBHandler {
   };
 
   // Execute queries
-  // If failure is encountered the query will be rolled back.
-  // Expects an array of DBQuery objects
-  // Adds the rows from response to each dbQuery object given to it
+  // On failure: rollback of all queries. On success updates DBQuery objects with returned rows.
   #executeQueries = async (dbQueries) => {
     let client;
 
@@ -429,7 +443,6 @@ class DBHandler {
 
     try {
       // Send the query and set the response rows in the DBQuery objects
-
       // Start a transaction
       await client.query('BEGIN');
       console.log('executing queries');
@@ -440,11 +453,9 @@ class DBHandler {
         console.log(dbQuery.queryText);
         const dbRes = await client.query(dbQuery.queryText, dbQuery.params);
 
-        // Log the result and save it in in the dbQuery object
-        // console.log(dbRes.rows);
+        // Save the resulting rows as dbRes.rows
         dbQuery.rows = dbRes.rows;
       }
-
       // Commit the transaction if arrived here without error
       await client.query('COMMIT');
       console.log('Query completed successfully');
