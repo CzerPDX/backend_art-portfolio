@@ -12,7 +12,7 @@ require(`dotenv`).config();
 // Get all art image information in the database.
 router.get(`/all-art`, async (req, res) => {
   try {
-    res.send(await dbHandler.getAllimages());
+    res.send(await dbHandler.getAllImages());
   } catch (err) {
     console.error(`Failed to connect to database`, err);
     res.status(500).send(`Failed to connect to database`);
@@ -34,7 +34,7 @@ router.get(`/all-tags`, async (req, res) => {
 // Dynamic route. Get all image data that has been tagged with tagName
 router.get(`/art/:tagName`, async (req, res) => {
   try {
-    res.send(await dbHandler.getAllimagesByTag(req.params.tagName));
+    res.send(await dbHandler.getAllImagesByTag(req.params.tagName));
   } catch (err) {
     console.error(`Failed to connect to database`, err);
     res.status(500).send(`Failed to connect to database`);
@@ -46,6 +46,15 @@ router.get(`/art/:tagName`, async (req, res) => {
 router.get(`/all-filenames`, async (req, res) => {
   try {
     res.send(await dbHandler.getAllFilenames());
+  } catch (err) {
+    console.error(`Failed to connect to database`, err);
+    res.status(500).send(`Failed to connect to database`);
+  }
+});
+
+router.get(`/all-assocs`, async (req, res) => {
+  try {
+    res.send(await dbHandler.getAllAssocs());
   } catch (err) {
     console.error(`Failed to connect to database`, err);
     res.status(500).send(`Failed to connect to database`);

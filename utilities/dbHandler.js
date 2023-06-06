@@ -30,10 +30,30 @@ class DBHandler {
     this.pool = null;
   }
 
-  cleanupHandler = () => {
+  // Setup the pool
+  setupHandler = async () => {
+    try {
+      if (!this.pool) {
+        this.pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
+        console.log('Pool open');
+      } else {
+        console.error('Error: Tried to open pool, but pool was already open.');
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  };
+
+  cleanupHandler = async () => {
     if (this.pool) {
-      this.pool.end();
-      console.log('Pool closed')
+      try {
+        this.pool.end();
+        console.log('Pool closed')
+      } catch (error) {
+        console.error(`Error closing pool: ${error}`);
+        throw error;
+      }
     }
   };
 
@@ -57,7 +77,7 @@ class DBHandler {
       return true;
 
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       throw error;
     }
   }
@@ -93,7 +113,7 @@ class DBHandler {
       return true;
 
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       throw error;
     }
   }
@@ -128,24 +148,24 @@ class DBHandler {
   }
 
   // Adds a filename-tag association tot eh assoc table
-  addAssocToDB = async (tagName, filename) => {
+  addAssocToDB = async (filename, tagName) => {
     try {
       await this.#executeQueries([this.#addAssocQuery(filename, tagName)]);
       return true;
 
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       throw error;
     }
   }
 
   // Removes a filename-tag association from the assoc table
-  removeAssocFromDB = async (tagName, filename) => {
+  removeAssocFromDB = async (filename, tagName) => {
     try {
       // Set up query
       const removeAssocQueryText = `
       DELETE 
-      FROM portfolio_image_tags_assoc assoc
+      FROM  portfolio_image_tags_assoc assoc
       WHERE assoc.filename = $1
       AND assoc.tag_id = (
         SELECT tags.tag_id
@@ -162,11 +182,33 @@ class DBHandler {
       return true;
 
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       throw error;
     }
   }
 
+  // Get all assocs as an array of objects that includes filename and tagName
+  getAllAssocs = async() => {
+    try {
+      // Set up query
+      const getAllAssocsQueryText = `
+      SELECT assoc.filename, tags.tag_name
+      FROM portfolio_image_tags_assoc assoc,
+      portfolio_tags tags
+      WHERE assoc.tag_id = tags.tag_id`;
+      const getAllAssocsQuery = new DBQuery(getAllAssocsQueryText);
+
+      // Execute query
+      await this.#executeQueries([getAllAssocsQuery]);
+
+      // Send the rows back out to the client
+      return getAllAssocsQuery.rows;
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
 
   // Add an image to the portfolio_images table
   // Also adds entries to assoc table for the filename any tags are provided
@@ -226,6 +268,7 @@ class DBHandler {
 
       // Return true if this is reached without error
       return true;
+
     } catch (error) {
       console.error(error);
       throw error;
@@ -234,7 +277,7 @@ class DBHandler {
 
   // Get all images in the db
   // Returns an array of all rows in the portfolio_images table
-  getAllimages = async () => {
+  getAllImages = async () => {
     try {
       // Set up query
       const allImagesQueryText = `SELECT * FROM portfolio_images`;
@@ -245,16 +288,16 @@ class DBHandler {
 
       // Return true if this is reached without error
       return allImagesQuery.rows
+
     } catch (error) {
       console.error(error);
       throw error;
     }
   }
 
-
   // Get all images reated to a certain tag name in the db
   // Returns an array of portfolio_images rows matching the tagName parameter
-  getAllimagesByTag = async (tagName) => {
+  getAllImagesByTag = async (tagName) => {
     try {
       // Set up query text
       const imagesByTagNameQueryText = `
@@ -289,6 +332,7 @@ class DBHandler {
       FROM portfolio_images images`;
       const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
 
+      // Execute queries
       await this.#executeQueries([allFilenamesQuery]);
 
       // Pull tag names out of object and into an array to be sent to client
@@ -306,7 +350,7 @@ class DBHandler {
     }
   }
 
-  getTaglessimages = async (tagName) => {
+  getTaglessImages = async (tagName) => {
     // Get a list of all entries in portfolio_images that do not have any entries in portfolio_image_tags_assoc
   }
 
@@ -327,7 +371,7 @@ class DBHandler {
     const addAssocQueryParams = [filename, tagName];
     return new DBQuery(addAssocQueryText, addAssocQueryParams);
   }
-
+  
 
   // Database connection and executeQuery functions
   // These methods handle the pool setup and connection to the database
@@ -404,15 +448,7 @@ class DBHandler {
     }   
   };
 
-  // Setup the pool
-  #setupHandler = async () => {
-    if (!this.pool) {
-      this.pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
-      console.log('Pool open');
-    } else {
-      console.error('Error: Pool already open');
-    }
-  };
+  
 
   // Execute queries
   // On failure: rollback of all queries. On success updates DBQuery objects with returned rows.
@@ -420,16 +456,13 @@ class DBHandler {
     let client;
 
     try {
-      // Make sure the database connection pool is set up then set up the client
-      if (!this.pool) {
-        await this.#setupHandler();
-      }
       client = await this.pool.connect();
     } catch (error) {
+      // If an error has occurred, roll back the transaction to undo all changes
       console.error(error);
       throw error;
-    } 
-
+    }
+    
     try {
       // Send the query and set the response rows in the DBQuery objects
       // Start a transaction
@@ -453,14 +486,24 @@ class DBHandler {
       // If an error has occurred, roll back the transaction to undo all changes
       console.error(error);
       console.log('Rolling back commit...')
-      await client.query('ROLLBACK');
-      console.log('Commit rollback')
+      try {
+        await client.query('ROLLBACK');
+        console.log('Commit rollback')
+      } catch (error) {
+        console.error(`Failed to rollback transaction: ${error}`);
+      }
       throw error;
 
     } finally {
       // Close out client
-      client.release();
-    }
+      if (client) {
+        try {
+          await client.release();
+        } catch (error) {
+          console.error(`Failed to release client: ${error}`);
+        }
+      }
+    }    
   };
 }
 

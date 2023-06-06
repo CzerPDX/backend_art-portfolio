@@ -3,27 +3,52 @@
 const dbHandler = require('./dbHandler');
 require('dotenv').config();
 
-// Test variables
-const tagName = 'a-new-tag-for-testing';
-const filename = 'a-test-filename.jpg';
-const bucketUrl = 'http://a-test-bucket-url.com';
-const description = 'descriptive test description';
-const altText = 'alt text alternatively textual';
-const tags = [tagName, 'illustration'];
-
 // Utils
 const doesTagNameExist = async (tagName) => {
   const allTagNames = await dbHandler.getAllTagNames();
+  console.log(allTagNames);
+  console.log(allTagNames.includes(tagName));
   return allTagNames.includes(tagName);
-}
+};
 
 const doesFilenameExist = async (filename) => {
   const allFilenames = await dbHandler.getAllFilenames();
   return allFilenames.includes(filename);
-}
+};
+
+const doesAssocExist = async (filename, tagName) => {
+  const allAssocs = await dbHandler.getAllAssocs();
+  let found = false;
+  for (let assoc of allAssocs) {
+    if ((assoc.filename === filename) && (assoc.tag_name === tagName)) {
+      found = true;
+    }
+  }
+  return found;
+};
+
+beforeAll(async () => {
+  try {
+    // Setup dbHandler before tests
+    await dbHandler.setupHandler();
+  } catch (error) {
+    console.error(`Error setting up pool: ${error}`);
+  }
+});
+
+afterAll(async () => {
+  try {
+    // Cleanup dbHandler after tests
+    await dbHandler.cleanupHandler();
+  } catch (error) {
+    console.error(`Error closing down pool: ${error}`);
+  }
+});
 
 // Tests
 test('Add and remove a tag from portfolio_tags table', async () => {
+  const tagName = 'tag-add-remove-test';
+
   try {
     // Setup test
     // If tag exists, remove it
@@ -38,54 +63,88 @@ test('Add and remove a tag from portfolio_tags table', async () => {
     expect(await dbHandler.addTagToDB(tagName)).toBe(true);
     expect(await doesTagNameExist(tagName)).toBe(true);
     // Remove the tag and verify it no longer exists
-    expect(await dbHandler.removeTagFromDB(tagName)).toBe(false);
+    expect(await dbHandler.removeTagFromDB(tagName)).toBe(true);
     expect(await doesTagNameExist(tagName)).toBe(false);
 
   } catch (error) {
-    // Jest will automatically fail the test when a thrown error reaches this block
     console.error(`Test failed with error: ${error}`);
+    throw(error);
   }
-}), 6000;
-
-
-test('Add and remove an image from portfolio_images table', async () => {
-  // Setup test
-  // If image exists, remove it
-  if (await doesFilenameExist(filename)) {
-    await dbHandler.removeImageFromDB(filename);
-  }
-
-  // Begin test
-  // Verify the image does not yet exist
-  expect(await doesFilenameExist(filename)).toBe(false);
-  // Add the file and verify it exists now
-  expect(await dbHandler.addImageToDB(filename, bucketUrl, description, altText, tags)).toBe(true);
-  expect(await doesFilenameExist(filename)).toBe(true);
-  // Remove the image and verify it no longer exists
-  expect(await dbHandler.removeImageFromDB(filename)).toBe(true);
-  expect(await doesFilenameExist(filename)).toBe(false);
 });
 
-// test('Add and remove an association from portfolio_image_tags_assoc table', async () => {
-//   // Setup test
-//     // If test tag does not exist, add it
-//     // If test image does not exist, add it
-//     // If assoc exists, remove it
+test('Add and remove an image from portfolio_images table', async () => {
+  try {
+    // Setup test
+    const filename = 'image-add-remove-test.jpg';
+    const bucketUrl = 'http://a-test-bucket-url.com';
+    const description = 'descriptive test description';
+    const altText = 'alt text alternatively textual';
+    // If image exists, remove it
+    if (await doesFilenameExist(filename)) {
+      await dbHandler.removeImageFromDB(filename);
+    }
 
-//   // Begin test
-//   // Add assoc
-//     // Verify the assoc does not yet exist
-//     // Add it
-//     // Check that it exists
-//   // Remove assoc
-//     // Remove the assoc
-//     // Verify it no longer exists
+    // Begin test
+    // Verify the image does not yet exist
+    expect(await doesFilenameExist(filename)).toBe(false);
+    // Add the file and verify it exists now
+    expect(await dbHandler.addImageToDB(filename, bucketUrl, description, altText)).toBe(true);
+    expect(await doesFilenameExist(filename)).toBe(true);
+    // Remove the image and verify it no longer exists
+    expect(await dbHandler.removeImageFromDB(filename)).toBe(true);
+    expect(await doesFilenameExist(filename)).toBe(false);
+  } catch (error) {
+    console.error(`Test failed with error: ${error}`);
+    throw(error);
+  }
+});
 
-//   // Cleanup test
-//     // Remove test tag
-//     // Remove test image
-// });
+test('Add and remove an association from portfolio_image_tags_assoc table', async () => {
+  try {
+    // Setup test
+    const tagName = 'assoc-add-remove-test';
+    const filename = 'assoc-add-remove-test.jpg';
+    const bucketUrl = 'http://a-test-bucket-url.com';
+    const description = 'description test text';
+    const altText = 'alt text test';
+    // If test tag does not exist, add it
+    // const tagExistResult = await doesTagNameExist(tagName);
+    if (!await doesTagNameExist(tagName)) {
+      await dbHandler.addTagToDB(tagName);
+      expect(await doesTagNameExist(tagName)).toBe(true);
+    }
+    // If test image does not exist, add it
+    if (!await doesFilenameExist(filename)) {
+      await dbHandler.addImageToDB(filename, bucketUrl, description, altText);
+      expect(await doesFilenameExist(filename)).toBe(true);
+    }
+    // If assoc exists, remove it
+    if (await doesAssocExist(filename, tagName)) {
+      await dbHandler.removeAssocFromDB(filename, tagName);
+      expect(await doesAssocExist(filename, tagName)).toBe(true);
+    }
 
+    // Begin test
+    // Verify the assoc does not yet exist
+    expect(await doesAssocExist(filename, tagName)).toBe(false);
+    // Add it the association and verify that it exists
+    expect(await dbHandler.addAssocToDB(filename, tagName)).toBe(true);
+    expect(await doesAssocExist(filename, tagName)).toBe(true);
+    // Remove assoc and verify it no longer exists
+    expect(await dbHandler.removeAssocFromDB(filename, tagName)).toBe(true);
+    expect(await doesAssocExist(filename, tagName)).toBe(false);
 
-// Clean up the dbHandler after it's done being used
-dbHandler.cleanupHandler();
+    // Cleanup test
+    // Remove test tag if it exists
+    if (await doesTagNameExist(tagName)) {
+      await dbHandler.removeTagFromDB(tagName);
+    }
+    // Remove test image
+    if (await doesFilenameExist(filename)) {
+      await dbHandler.removeImageFromDB(filename);
+    }
+  } catch (error) {
+    console.error(`Test failed with error: ${error}`);
+    throw(error);
+  }
+}, 80000);

@@ -1,13 +1,23 @@
 require('dotenv').config();
 const express = require('express');
 const { validateAPI, apiLimiter } = require('./utilities/security');
+const dbHandler = require('./utilities/dbHandler');   // Database handler singleton
+const app = express();   
 
-// Singleton for the database handler
-const dbHandler = require('./utilities/dbHandler'); 
+// Used to gracefully shut down the server
+const cleanupAndExit = async () => {
+  try {
+    await dbHandler.cleanupHandler();
+    // Exit with success code
+    process.exit(0); 
+  } catch (error) {
+    console.error(`Error cleaning up dbHandler: ${error}`);
+    // Exit with failure code
+    process.exit(1); 
+  }
+};
 
-const app = express();
-
-// Figure out the port
+// Setup port
 // In live environment the NODE_ENV will be set to "production"
 const port = process.env.NODE_ENV === 'production' ? null : process.env.PORTFOLIO_API_PORT;
 
@@ -17,30 +27,32 @@ app.all('*', (req, res, next) => {
   next();
 });
 
+// Middleware
 //  Validate request's api key before proceeding
 app.use(validateAPI);
-
 // Use rate IP-based rate limiting
 app.use(apiLimiter);
 
-// Serve routes
-
+// Routes
 // Upload Routes
 const uploadRoutes = require('./routes/uploadRoutes');
 app.use('/upload', uploadRoutes);
-
 // DB Routes
 const dbRoutes = require('./routes/dbRoutes');
 app.use('/db', dbRoutes);
 
-
 // Start the server
-app.listen(port, () => {
-  console.log(`Server started on port ${port ? port : 'assigned by A2 Hosting'}...`);
+app.listen(port, async () => {
+  try {
+    await dbHandler.setupHandler();
+    console.log(`Server started on port ${port ? port : 'assigned by A2 Hosting'}...`);
+  } catch (error) {
+    console.error(`Error setting up dbHandler: ${error}`)
+    console.log(`Shutting down server...`)
+    await cleanupAndExit();
+  }
 });
 
-
-process.on('SIGTERM', async () => {
-  dbHandler.cleanupHandler();
-  console.log('SIGTERM REACHED.');
-});
+// Run cleanup on SIGINT and SIGTERM
+process.on('SIGINT', cleanupAndExit);
+process.on('SIGTERM', cleanupAndExit);
