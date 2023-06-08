@@ -35,8 +35,8 @@ app.use(apiLimiter);
 
 // Routes
 // Upload Routes
-const uploadRoutes = require('./routes/uploadRoutes');
-app.use('/upload', uploadRoutes);
+const uploadDeleteRoutes = require('./routes/uploadDeleteRoutes');
+app.use('/upload', uploadDeleteRoutes);
 // DB Routes
 const dbRoutes = require('./routes/dbRoutes');
 app.use('/db', dbRoutes);

@@ -60,10 +60,10 @@ test('Add and remove a tag from portfolio_tags table', async () => {
     // Verify the tag does not yet exist
     expect(await doesTagNameExist(tagName)).toBe(false);
     // Add the tag and verify it exists
-    expect(await dbHandler.addTagToDB(tagName)).toBe(true);
+    await dbHandler.addTagToDB(tagName);
     expect(await doesTagNameExist(tagName)).toBe(true);
     // Remove the tag and verify it no longer exists
-    expect(await dbHandler.removeTagFromDB(tagName)).toBe(true);
+    await dbHandler.removeTagFromDB(tagName)
     expect(await doesTagNameExist(tagName)).toBe(false);
 
   } catch (error) {
@@ -88,10 +88,10 @@ test('Add and remove an image from portfolio_images table', async () => {
     // Verify the image does not yet exist
     expect(await doesFilenameExist(filename)).toBe(false);
     // Add the file and verify it exists now
-    expect(await dbHandler.addImageToDB(filename, bucketUrl, description, altText)).toBe(true);
+    await dbHandler.addImageToDB(filename, bucketUrl, description, altText);
     expect(await doesFilenameExist(filename)).toBe(true);
     // Remove the image and verify it no longer exists
-    expect(await dbHandler.removeImageFromDB(filename)).toBe(true);
+    await dbHandler.removeImageFromDB(filename);
     expect(await doesFilenameExist(filename)).toBe(false);
   } catch (error) {
     console.error(`Test failed with error: ${error}`);
@@ -128,10 +128,10 @@ test('Add and remove an association from portfolio_image_tags_assoc table', asyn
     // Verify the assoc does not yet exist
     expect(await doesAssocExist(filename, tagName)).toBe(false);
     // Add it the association and verify that it exists
-    expect(await dbHandler.addAssocToDB(filename, tagName)).toBe(true);
+    await dbHandler.addAssocToDB(filename, tagName)
     expect(await doesAssocExist(filename, tagName)).toBe(true);
     // Remove assoc and verify it no longer exists
-    expect(await dbHandler.removeAssocFromDB(filename, tagName)).toBe(true);
+    await dbHandler.removeAssocFromDB(filename, tagName)
     expect(await doesAssocExist(filename, tagName)).toBe(false);
 
     // Cleanup test

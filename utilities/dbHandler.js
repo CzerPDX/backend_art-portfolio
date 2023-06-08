@@ -8,7 +8,7 @@
   NOTE:
   The portfolio_tags table uses an internal sequence function to iterate its id (it assigns it itself)
   With postgres I had to grant usage to my database user like in the following stack overflow post to be able to add to that table:
-  https://stackoverflow.com/questions/9325017/error-permission-denied-for-sequence-cities-id-seq-using-postgres
+  https://stackoverflow.com/questions/9325017/err-permission-denied-for-sequence-cities-id-seq-using-postgres
 */
 
 const { Pool } = require('pg')
@@ -20,6 +20,31 @@ class DBQuery {
     this.queryText = queryText;
     this.params = params;
     this.rows = [];
+  }
+}
+
+// Custom errs
+class Connectionerr extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'Connectionerr';
+    this.code = 'DB_CONNECTION_FAILURE';
+  }
+}
+
+class Transactionerr extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'Transactionerr';
+    this.code = 'DB_TRANSACTION_FAILURE';
+  }
+}
+
+class ClientReleaseerr extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ClientReleaseerr';
+    this.code = 'DB_CLIENT_RELEASE_FAILURE';
   }
 }
 
@@ -37,11 +62,11 @@ class DBHandler {
         this.pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
         console.log('Pool open');
       } else {
-        console.error('Error: Tried to open pool, but pool was already open.');
+        console.error('err: Tried to open pool, but pool was already open.');
       }
-    } catch (error) {
-      console.error(error);
-      throw error;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   };
 
@@ -50,9 +75,9 @@ class DBHandler {
       try {
         this.pool.end();
         console.log('Pool closed')
-      } catch (error) {
-        console.error(`Error closing pool: ${error}`);
-        throw error;
+      } catch (err) {
+        console.error(`err closing pool: ${err.message}`);
+        throw err;
       }
     }
   };
@@ -73,18 +98,15 @@ class DBHandler {
       // Exercute query
       await this.#executeQueries([addTagQuery]);
 
-      // Send true if we get here without error
-      return true;
-
-    } catch (error) {
-      console.error(error);
-      return false;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   }
 
   // Removes a tag from the portfolio_tags table
   // It will also remove related tag entries from the portfolio_image_tags_assoc table
-  // If it succeeds it will return true. Failure will throw an error
+  // If it succeeds it will return true. Failure will throw an err
   removeTagFromDB = async (tagName) => {
     try {
       // Setup Queries
@@ -107,14 +129,11 @@ class DBHandler {
       const removeTagQuery = new DBQuery(removeTagQueryText, removeTagQueryParams);
       
       // Execute queries
-      await this.#executeQueries([removeAssocsByTagQuery, removeTagQuery]);
+      this.#executeQueries([removeAssocsByTagQuery, removeTagQuery]);
 
-      // Return true if this is reached without error
-      return true;
-
-    } catch (error) {
-      console.error(error);
-      return false;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   }
 
@@ -132,18 +151,16 @@ class DBHandler {
       // Execute query
       await this.#executeQueries([allTagNamesQuery]);
 
-      // Pull tag names out of object and into an array to be sent to client
+      // Parse the return data in allTagNamesQuery.rows for return to the client
       const retArr = [];
       for (let tagName of  allTagNamesQuery.rows) {
         retArr.push(tagName.tag_name);
       }
-
-      // Send the tag names back out to the calling function in an array
       return retArr;
 
-    } catch (error) {
-      console.error(error);
-      return false;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   }
 
@@ -151,11 +168,9 @@ class DBHandler {
   addAssocToDB = async (filename, tagName) => {
     try {
       await this.#executeQueries([this.#addAssocQuery(filename, tagName)]);
-      return true;
-
-    } catch (error) {
-      console.error(error);
-      return false;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   }
 
@@ -178,17 +193,14 @@ class DBHandler {
       // Execute query
       await this.#executeQueries([removeAssocQuery]);
 
-      // Return true if this is reached without error
-      return true;
-
-    } catch (error) {
-      console.error(error);
-      return false;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   }
 
   // Get all assocs as an array of objects that includes filename and tagName
-  getAllAssocs = async() => {
+  getAllAssocs = async () => {
     try {
       // Set up query
       const getAllAssocsQueryText = `
@@ -200,13 +212,11 @@ class DBHandler {
 
       // Execute query
       await this.#executeQueries([getAllAssocsQuery]);
-
-      // Send the rows back out to the client
       return getAllAssocsQuery.rows;
 
-    } catch (error) {
-      console.error(error);
-      return false;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   }
 
@@ -234,12 +244,9 @@ class DBHandler {
       // Execute the queries on the queries list
       await this.#executeQueries(queries);
 
-      // Return true if this is reached without error
-      return true; 
-
-    } catch (error) {
-      console.error(error);
-      return false;
+    } catch (err) { 
+      console.error(err.message);
+      throw(err);
     }
   }
   
@@ -266,12 +273,9 @@ class DBHandler {
       // Execute queries
       await this.#executeQueries([removeAssocByFilenameQuery, removeImageQuery]);
 
-      // Return true if this is reached without error
-      return true;
-
-    } catch (error) {
-      console.error(error);
-      return false;
+    } catch (err) {
+      console.error(err.message);
+      throw(err);
     }
   }
 
@@ -283,15 +287,13 @@ class DBHandler {
       const allImagesQueryText = `SELECT * FROM portfolio_images`;
       const allImagesQuery = new DBQuery(allImagesQueryText);
 
-      // Execute query
+      // Execute the query and send the rows
       await this.#executeQueries([allImagesQuery]);
+      return allImagesQuery.rows;
 
-      // Return true if this is reached without error
-      return allImagesQuery.rows
-
-    } catch (error) {
-      console.error(error);
-      throw error;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   }
 
@@ -311,18 +313,16 @@ class DBHandler {
       const imagesByTagNameQueryParams = [tagName];
       const imagesByTagNameQuery = new DBQuery(imagesByTagNameQueryText, imagesByTagNameQueryParams);
 
+      // Execute the query and send the rows
       await this.#executeQueries([imagesByTagNameQuery]);
-
-      // Send the response back out to the calling function
       return imagesByTagNameQuery.rows;
 
-    } catch (error) {
-      console.error(error);
-      throw error;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   }
   
-
   // Returns all entries in the filenames column from the portfolio_images table
   getAllFilenames = async () => {
     try {
@@ -340,13 +340,11 @@ class DBHandler {
       for (let filenameRow of  allFilenamesQuery.rows) {
         retArr.push(filenameRow.filename);
       }
-
-      // Send the tag names back out to the calling function
       return retArr;
 
-    } catch (error) {
-      console.error(error);
-      throw error;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }
   }
 
@@ -403,9 +401,9 @@ class DBHandler {
       // Create the SSH tunnel
       let [server, conn] = await createTunnel(tunnelOptions, serverOptions, sshOptions, forwardOptions);
 
-      // If the server is in error, reject the promise and close the server
-      server.on('error', (error) => {
-        reject(error);
+      // If the server is in err, reject the promise and close the server
+      server.on('err', (err) => {
+        reject(err);
         server.close();
       });
 
@@ -423,10 +421,10 @@ class DBHandler {
         // Resovle the promise by providing the pool
         resolve(pool);
   
-      } catch (error) {
-        // Reject the promise if there's an error
-        console.error('Error setting up local pool: ', error);
-        reject(error); 
+      } catch (err) {
+        // Reject the promise if there's an err
+        console.error('err setting up local pool: ', err.message);
+        reject(err); 
       }
     });
   };
@@ -442,12 +440,11 @@ class DBHandler {
         database:   process.env.ART_DB_NAME,
         ssl:        false
       });
-    } catch (error) {
-      console.error(error);
-      throw error;
+    } catch (err) {
+      console.error(err.message);
+      throw err;
     }   
   };
-
   
 
   // Execute queries
@@ -457,10 +454,9 @@ class DBHandler {
 
     try {
       client = await this.pool.connect();
-    } catch (error) {
-      // If an error has occurred, roll back the transaction to undo all changes
-      console.error(error);
-      throw error;
+    } catch (err) {
+      console.error(err.message);
+      throw new Connectionerr(err.message);
     }
     
     try {
@@ -478,29 +474,27 @@ class DBHandler {
         // Save the resulting rows as dbRes.rows
         dbQuery.rows = dbRes.rows;
       }
-      // Commit the transaction if arrived here without error
+      // Commit the transaction if arrived here without err
       await client.query('COMMIT');
-      console.log('Query completed successfully');
-
-    } catch (error) {
-      // If an error has occurred, roll back the transaction to undo all changes
-      console.error(error);
+    } catch (err) {
+      // If an err has occurred, roll back the transaction to undo all changes
+      console.error(err.detail);
       console.log('Rolling back commit...')
       try {
         await client.query('ROLLBACK');
-        console.log('Commit rollback')
-      } catch (error) {
-        console.error(`Failed to rollback transaction: ${error}`);
+        console.log('Commit rollback');
+      } catch (err) {
+        console.error(`Failed to rollback transaction: ${err.message}`);
+        throw new Transactionerr(`Failed to rollback transaction: ${err.message}`);
       }
-      throw error;
-
+      throw new Transactionerr(`Database err: ${err.message}`);
     } finally {
       // Close out client
       if (client) {
         try {
           await client.release();
-        } catch (error) {
-          console.error(`Failed to release client: ${error}`);
+        } catch (err) {
+          throw new ClientReleaseerr(`Failed to release client: ${err.message}`);
         }
       }
     }    

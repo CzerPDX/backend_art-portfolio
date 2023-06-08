@@ -1,6 +1,6 @@
 /*
   dbRoutes.js is responsible for GET requests to get information from the database.
-  Routes for adding things into the database are less granual and are included in things like uploadRoutes and deleteRoutes
+  Routes for adding things into the database are less granual and are included in things like uploadDeleteRoutes and deleteRoutes
 */
 
 const express = require(`express`);
