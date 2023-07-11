@@ -41,3 +41,7 @@ The art portfolio website uses a PostgreSQL database to store information about 
 PRIMARY KEY (filename, tag_id)
 
 This database structure creates a many-to-many relationship between images and tags, allowing each image to have multiple tags and each tag to be associated with multiple images. The image_tags table serves as a junction table that links images and tags, enabling efficient querying and management of the relationships between them.
+
+
+# Testing
+This application uses jest for testing. To run tests type `npm run test` in the command line.
