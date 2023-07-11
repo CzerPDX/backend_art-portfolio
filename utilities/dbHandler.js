@@ -14,6 +14,9 @@
 const { Pool } = require('pg')
 const { createTunnel } = require(`tunnel-ssh`);
 
+// Error codes for database
+const duplicateErrCode = '23505';   // Violates unique entry constraint
+
 // DBQuery functions as a struct to hold queryText, query parameters, and query responses
 class DBQuery {
   constructor(queryText, params = []) {
@@ -24,27 +27,35 @@ class DBQuery {
 }
 
 // Custom errs
-class Connectionerr extends Error {
+class ConnectionErr extends Error {
   constructor(message) {
     super(message);
-    this.name = 'Connectionerr';
+    this.name = 'ConnectionErr';
     this.code = 'DB_CONNECTION_FAILURE';
   }
 }
 
-class Transactionerr extends Error {
+class TransactionErr extends Error {
   constructor(message) {
     super(message);
-    this.name = 'Transactionerr';
+    this.name = 'TransactionErr';
     this.code = 'DB_TRANSACTION_FAILURE';
   }
 }
 
-class ClientReleaseerr extends Error {
+class ClientReleaseErr extends Error {
   constructor(message) {
     super(message);
-    this.name = 'ClientReleaseerr';
+    this.name = 'ClientReleaseErr';
     this.code = 'DB_CLIENT_RELEASE_FAILURE';
+  }
+}
+
+class ConstraintErr extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ConstraintErr';
+    this.code = 'DB_PKEY_FAILURE';
   }
 }
 
@@ -456,7 +467,7 @@ class DBHandler {
       client = await this.pool.connect();
     } catch (err) {
       console.error(err.message);
-      throw new Connectionerr(err.message);
+      throw new ConnectionErr(err.message);
     }
     
     try {
@@ -484,17 +495,20 @@ class DBHandler {
         await client.query('ROLLBACK');
         console.log('Commit rollback');
       } catch (err) {
-        console.error(`Failed to rollback transaction: ${err.message}`);
-        throw new Transactionerr(`Failed to rollback transaction: ${err.message}`);
+        // console.error(`Failed to rollback transaction: ${err.message}`);
+        throw new TransactionErr(`Failed to rollback transaction: ${err.message}`);
       }
-      throw new Transactionerr(`Database err: ${err.message}`);
+      if (err.code === duplicateErrCode) {
+        throw new ConstraintErr(`Constraint error: ${err.constraint}`)
+      }
+      throw new TransactionErr(`Database err: ${err.message}`);
     } finally {
       // Close out client
       if (client) {
         try {
           await client.release();
         } catch (err) {
-          throw new ClientReleaseerr(`Failed to release client: ${err.message}`);
+          throw new ClientReleaseErr(`Failed to release client: ${err.message}`);
         }
       }
     }    
