@@ -103,8 +103,6 @@ const removeFromBucket = async (req, res) => {
   }
 };
 
-const IMAGEBUCKETLOCATION = ''
-
 const sendToDB = async (req, res) => {
   try {
     // Send image's metadata to the database
@@ -120,8 +118,9 @@ const sendToDB = async (req, res) => {
   }
 };
 
-router.delete('/', async (req, res) => {
-  console.log('Reached delete route.');
+router.delete('/:filename', async (req, res) => {
+  console.log(`Reached delete route for ${req.params.filename}`);
+  res.send(`Reached delete route for ${req.params.filename}`);
 });
 
 router.put('/', async (req, res) => {
@@ -137,7 +136,7 @@ router.put('/', async (req, res) => {
   try {
     await sendToDB(req, res);
   } catch (err) {
-    // Specific handling for constraint key issues
+    // Specific handling for unique key constraint issues
     if (err.code === 'DB_PKEY_FAILURE') {
       const errMsg = `Error: image already exists in the database. Remove existing database entry for this image or use a different filename. ${err.message}`;
       console.error(errMsg);
