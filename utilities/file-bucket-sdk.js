@@ -23,7 +23,7 @@ class EasyStore {
       if (response.status >= 200 && response.status < 300) {
         return response;
       } else {
-        throw new Error('Request failed: ' + response.message);
+        throw new Error(`Request failed: ${response.message}`);
       }
     } catch (error) {
       const errMsg = error.message || 'Unknown error when sending request to bucket.';
@@ -57,7 +57,6 @@ class EasyStore {
       console.error(errMsg);
       throw new Error(errMsg);
     }
-
   }
     
 
@@ -65,7 +64,7 @@ class EasyStore {
   async delete(params) {
     const options = {
       baseURL: this.endpoint,
-      url: `/${params.Bucket}/${params.Key}`,
+      url: `/delete/${params.Bucket}/${params.Key}`,
       method: 'DELETE',
       headers: {
         'x-api-key': this.apiKey,

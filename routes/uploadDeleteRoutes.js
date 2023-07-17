@@ -88,22 +88,20 @@ const uploadToBucket = async (req, res) => {
 };
 
 // Remove file from the image bucket
-const removeFromBucket = async (req, res) => {
+const removeFromBucket = async (filename) => {
   try {
     // Delete the file from the image bucket
     const params = {
       Bucket: process.env.BUCKET_NAME,
-      Key: req.file.originalname
+      Key: filename
     };
 
     return await easyStore.delete(params);
   } catch (err) {
-    console.error(`Error removing file from bucket: ${err.message}`);
+    console.error(err.message);
     throw err;
   }
 };
-
-const IMAGEBUCKETLOCATION = ''
 
 const sendToDB = async (req, res) => {
   try {
@@ -120,8 +118,29 @@ const sendToDB = async (req, res) => {
   }
 };
 
-router.delete('/', async (req, res) => {
-  console.log('Reached delete route.');
+router.delete('/:filename', async (req, res) => {
+  const filename = req.params.filename;
+  
+  // Remove image entries from DB
+  try {
+    dbHandler.removeImageFromDB(filename);
+  } catch (err) {
+    const errMsg = `Error when removing entry from database: ${err.message}`;
+    console.error(errMsg);
+    return res.status(500).send({ message: errMsg });
+  }
+  
+  // Then remove the image entry from the file bucket
+  try {
+    removeFromBucket(filename);
+  } catch (err) {
+    const errMsg = `Error when removing entry from file bucket: ${err.message}.`;
+    console.error(errMsg);
+    return res.status(500).send({ message: errMsg });
+  }
+
+  res.send({ message: `${filename} removed successfully.`})
+
 });
 
 router.put('/', async (req, res) => {
@@ -137,7 +156,7 @@ router.put('/', async (req, res) => {
   try {
     await sendToDB(req, res);
   } catch (err) {
-    // Specific handling for constraint key issues
+    // Specific handling for unique key constraint issues
     if (err.code === 'DB_PKEY_FAILURE') {
       const errMsg = `Error: image already exists in the database. Remove existing database entry for this image or use a different filename. ${err.message}`;
       console.error(errMsg);
@@ -160,6 +179,7 @@ router.put('/', async (req, res) => {
       await dbHandler.removeImageFromDB(req.file.originalname);
     } catch (err) {
       const errMsg = `Error. Failed to upload to file bucket. Additional error trying to remove from database during cleanup: ${err.message}`;
+      return res.status(500).send({ message: errMsg });
     }
     const errMsg = `Error uploading to image bucket: ${err.message}`;
     return res.status(500).send({ message: errMsg });

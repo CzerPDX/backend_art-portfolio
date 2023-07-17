@@ -34,9 +34,11 @@ app.use(validateAPI);
 app.use(apiLimiter);
 
 // Routes
-// Upload Routes
+// Upload & Delete Routes
 const uploadDeleteRoutes = require('./routes/uploadDeleteRoutes');
 app.use('/upload', uploadDeleteRoutes);
+app.use('/delete', uploadDeleteRoutes);
+
 // DB Routes
 const dbRoutes = require('./routes/dbRoutes');
 app.use('/db', dbRoutes);
