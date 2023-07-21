@@ -43,6 +43,10 @@ app.use('/delete', uploadDeleteRoutes);
 const dbRoutes = require('./routes/dbRoutes');
 app.use('/db', dbRoutes);
 
+// User Routes
+const userRoutes = require('./routes/userRoutes');
+app.use('/user', userRoutes);
+
 // Start the server
 app.listen(port, async () => {
   try {

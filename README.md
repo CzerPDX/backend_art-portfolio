@@ -4,8 +4,9 @@ In-progress. A `Node.js` backend for the art portfolio at portlandredbird.com. O
 
 # Content Management
 This section of the readme details the routes and database structure for managing the content of the portfolio
+
 ## Content Management Routes
-A user must be authorized with an API key in the `x-api-key` field of the request header in order to use these routes.
+The frontend client must be authorized with an API key in the `x-api-key` field of the request header in order to use these routes.
 
 ### /artRoutes
 Serves information about the art in the portfolio. The frontend can call these routes and get the following information about an image:
@@ -135,13 +136,6 @@ Requires:
 
 Returns:
 - All columns (except `hashed_password`) for the user in the `users` table.
-
-### `/get-user-access`: GET
-Requires:
-- valid JWT
-
-Returns:
-- Current bucket access privileges for the user associated with the provided valid JWT.
 
 
 # Testing
