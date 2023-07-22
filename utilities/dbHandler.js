@@ -363,6 +363,13 @@ class DBHandler {
     // Get a list of all entries in portfolio_images that do not have any entries in portfolio_image_tags_assoc
   }
 
+  // USER METHODS
+
+  // Add user to users table
+  addUser = async () => {
+    
+  }
+
 
   // Private methods
 
@@ -372,13 +379,17 @@ class DBHandler {
 
   // Add to association table
   #addAssocQuery = (filename, tagName) => {
-    const addAssocQueryText = `
-    INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
-      SELECT $1, tags.tag_id
-      FROM portfolio_tags tags
-      WHERE tags.tag_name = $2;`;
-    const addAssocQueryParams = [filename, tagName];
-    return new DBQuery(addAssocQueryText, addAssocQueryParams);
+    try {
+      const addAssocQueryText = `
+      INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
+        SELECT $1, tags.tag_id
+        FROM portfolio_tags tags
+        WHERE tags.tag_name = $2;`;
+      const addAssocQueryParams = [filename, tagName];
+      return new DBQuery(addAssocQueryText, addAssocQueryParams);
+    } catch (err) {
+      throw err;
+    }
   }
   
 

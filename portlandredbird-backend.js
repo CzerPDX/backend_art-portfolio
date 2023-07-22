@@ -29,6 +29,11 @@ app.all('*', (req, res, next) => {
 
 // Middleware
 //  Validate request's api key before proceeding
+try {
+
+} catch (err) {
+  
+}
 app.use(validateAPI);
 // Use rate IP-based rate limiting
 app.use(apiLimiter);
