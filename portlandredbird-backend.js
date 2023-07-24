@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { validateAPI, apiLimiter } = require('./utilities/security');
-const dbHandler = require('./utilities/dbHandler');   // Database handler singleton
+const dbHandler = require('./utilities/dbHandler').dbHandlerInstance;  // Database handler singleton
 const app = express();   
 
 // Used to gracefully shut down the server
