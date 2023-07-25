@@ -93,6 +93,75 @@ class ContentManagement {
     return `${filename} removed successfully.`;
   };
 
+  // Get all images in the db
+  // Returns an array of all rows in the portfolio_images table
+  getAllImages = async () => {
+    try {
+      // Set up query
+      const allImagesQueryText = `SELECT * FROM portfolio_images`;
+      const allImagesQuery = new DBQuery(allImagesQueryText);
+
+      // Execute the query and send the rows
+      await this.dbHandler.executeQueries([allImagesQuery]);
+      return allImagesQuery.rows;
+
+    } catch (err) {
+      console.error(err.message);
+      throw err;
+    }
+  };
+
+  // Get all images reated to a certain tag name in the db
+  // Returns an array of portfolio_images rows matching the tagName parameter
+  getAllImagesByTag = async (tagName) => {
+    try {
+      // Set up query text
+      const imagesByTagNameQueryText = `
+      SELECT images.*
+      FROM portfolio_tags tag
+      JOIN portfolio_image_tags_assoc assoc
+        ON tag.tag_name = $1
+      JOIN portfolio_images images
+        ON images.filename = assoc.filename
+      WHERE tag.tag_id = assoc.tag_id`;
+      const imagesByTagNameQueryParams = [tagName];
+      const imagesByTagNameQuery = new DBQuery(imagesByTagNameQueryText, imagesByTagNameQueryParams);
+
+      // Execute the query and send the rows
+      await this.dbHandler.executeQueries([imagesByTagNameQuery]);
+      return imagesByTagNameQuery.rows;
+
+    } catch (err) {
+      console.error(err.message);
+      throw err;
+    }
+  };
+
+  // Returns all entries in the filenames column from the portfolio_images table
+  getAllImageFilenames = async () => {
+    try {
+      // Set up query text
+      const allFilenamesQueryText = `
+      SELECT images.filename
+      FROM portfolio_images images`;
+      const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
+
+      // Execute queries
+      await this.dbHandler.executeQueries([allFilenamesQuery]);
+
+      // Pull tag names out of object and into an array to be sent to client
+      const retArr = [];
+      for (let filenameRow of  allFilenamesQuery.rows) {
+        retArr.push(filenameRow.filename);
+      }
+      return retArr;
+
+    } catch (err) {
+      console.error(err.message);
+      throw err;
+    }
+  };
+
 
   // Private Methods
 
@@ -223,7 +292,35 @@ class ContentManagement {
       const bucketUrl = `${process.env.FILE_BUCKET_ENDPOINT}/${req.file.originalname}`;
       const description = req.body.description;
       const altText = req.body.alt_text;
-      return await this.#addImageToDB(filename, bucketUrl, description, altText);
+
+      // Set up tags to either be an empty array or to contain the tags given in the request body
+      let tags;
+      if (req.body.tags) {
+        tags = JSON.parse(req.body.tags);
+      } else {
+        tags = [];
+      }
+
+      // Set up queries
+      const queries = [];
+
+      // Add a new row to the portfolio_images db with the parameter information
+      const addImageQueryText = `
+      INSERT INTO portfolio_images (filename, bucket_url, description, alt_text)
+      VALUES ($1, $2, $3, $4)`;
+      const addImageQueryParams = [filename, bucketUrl, description, altText];
+      const addImageQuery = new DBQuery(addImageQueryText, addImageQueryParams);
+      // Add the query to the queries list
+      queries.push(addImageQuery);
+
+      // Add a query to the queries list for each the filename-tag associations for this image
+      for (let tagIdx in tags) {
+        const tagName = tags[tagIdx];
+        queries.push(this.#addImageTagAssocQuery(filename, tagName));
+      }
+
+      // Execute the queries on the queries list
+      await this.dbHandler.executeQueries(queries);
     } catch (err) {
       throw err;
     }
@@ -254,7 +351,7 @@ class ContentManagement {
       const removeTagQuery = new DBQuery(removeTagQueryText, removeTagQueryParams);
       
       // Execute queries
-      this.dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
+      await this.dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
 
     } catch (err) {
       console.error(err.message);
@@ -423,74 +520,7 @@ class ContentManagement {
     }
   };
 
-  // Get all images in the db
-  // Returns an array of all rows in the portfolio_images table
-  #getAllImages = async () => {
-    try {
-      // Set up query
-      const allImagesQueryText = `SELECT * FROM portfolio_images`;
-      const allImagesQuery = new DBQuery(allImagesQueryText);
-
-      // Execute the query and send the rows
-      await this.dbHandler.executeQueries([allImagesQuery]);
-      return allImagesQuery.rows;
-
-    } catch (err) {
-      console.error(err.message);
-      throw err;
-    }
-  };
-
-  // Get all images reated to a certain tag name in the db
-  // Returns an array of portfolio_images rows matching the tagName parameter
-  #getAllImagesByTag = async (tagName) => {
-    try {
-      // Set up query text
-      const imagesByTagNameQueryText = `
-      SELECT images.*
-      FROM portfolio_tags tag
-      JOIN portfolio_image_tags_assoc assoc
-        ON tag.tag_name = $1
-      JOIN portfolio_images images
-        ON images.filename = assoc.filename
-      WHERE tag.tag_id = assoc.tag_id`;
-      const imagesByTagNameQueryParams = [tagName];
-      const imagesByTagNameQuery = new DBQuery(imagesByTagNameQueryText, imagesByTagNameQueryParams);
-
-      // Execute the query and send the rows
-      await this.dbHandler.executeQueries([imagesByTagNameQuery]);
-      return imagesByTagNameQuery.rows;
-
-    } catch (err) {
-      console.error(err.message);
-      throw err;
-    }
-  };
-
-  // Returns all entries in the filenames column from the portfolio_images table
-  #getAllImageFilenames = async () => {
-    try {
-      // Set up query text
-      const allFilenamesQueryText = `
-      SELECT images.filename
-      FROM portfolio_images images`;
-      const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
-
-      // Execute queries
-      await this.dbHandler.executeQueries([allFilenamesQuery]);
-
-      // Pull tag names out of object and into an array to be sent to client
-      const retArr = [];
-      for (let filenameRow of  allFilenamesQuery.rows) {
-        retArr.push(filenameRow.filename);
-      }
-      return retArr;
-
-    } catch (err) {
-      console.error(err.message);
-      throw err;
-    }
-  };
+  
 
   // Reused Queries
   // These methods return DBQuery objects so they can be used repeatedly throughout DBHandler as they are called
@@ -511,7 +541,5 @@ class ContentManagement {
     }
   }
 }
-
-
 
 module.exports = { ContentManagement };
