@@ -1,9 +1,8 @@
 const multer = require('multer');
+const { body, validationResult } = require('express-validator');
 
 const { BadRequestErr, ConflictErr } = require('./customErrors');
 const DBQuery = require('../utilities/dbHandler').DBQuery;
-
-
 
 require(`dotenv`).config();
 
@@ -458,36 +457,6 @@ class ContentManagement {
     } catch (err) {
       console.error(err.message);
       throw err;
-    }
-  };
-
-  // Add an image to the portfolio_images table
-  // Also adds entries to assoc table for the filename any tags are provided
-  #addImageToDB = async (filename, bucketUrl, description, altText, tags = []) => {
-    try {
-      // Set up queries
-      const queries = [];
-
-      // Add a new row to the portfolio_images db with the parameter information
-      const addImageQueryText = `
-      INSERT INTO portfolio_images (filename, bucket_url, description, alt_text)
-      VALUES ($1, $2, $3, $4)`;
-      const addImageQueryParams = [filename, bucketUrl, description, altText];
-      const addImageQuery = new DBQuery(addImageQueryText, addImageQueryParams);
-      // Add the query to the queries list
-      queries.push(addImageQuery);
-
-      // Add a query to the queries list for each the filename-tag associations for this image
-      for (let tagName of tags) {
-        queries.push(this.#addImageTagAssocQuery(filename, tagName));
-      }
-
-      // Execute the queries on the queries list
-      await this.dbHandler.executeQueries(queries);
-
-    } catch (err) { 
-      console.error(err.message);
-      throw(err);
     }
   };
 

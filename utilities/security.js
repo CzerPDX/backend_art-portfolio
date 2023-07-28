@@ -1,4 +1,7 @@
 const rateLimit = require('express-rate-limit');
+const { body, validationResult } = require('express-validator');
+
+const { BadRequestErr } = require('./customErrors');
 
 // Compare API keys with constant time to mitigate timing attacks
 const constantTimeComparison = (comp1, comp2) => {
@@ -41,8 +44,52 @@ const apiLimiter = rateLimit({
   message: "Too many requests created from this IP, please try again after 15 minutes."
 });
 
+// Sanitize input to go into database. Returns sanitized input. To be used with parameterized queries such as what is used in the pg library
+// Remove leading and trailing whitespaces
+// Check to make sure characters are valid
+// Escape special characters (will be replaced with HTML versions using express-validator)
+const sanitizeInput = (input) => {
+
+  // Verify that input is a string
+  if (typeof input !== "string") {
+    throw new BadRequestErr('Please only provide a string as input.');
+  }
+
+  // Allowed characters: 
+  // alphanumeric uppercase and lowercase, space, and the following symbols: . , ; : ? ! ( ) \ / | ' " - _ @ # $ % ^ & * [ ] + = ~ `
+  const allowedCharsRegex = /^[a-zA-Z0-9 .,;:?!()<>\\\/'"\-_@#$%^&*|\[\]\~+`=]*$/; // A regular expression of allowed characters for input
+
+  // Verify that the input only contains valid characters
+  if (!allowedCharsRegex.test(input)) {
+    throw new BadRequestErr('Input contains invalid characters.');
+  }
+
+  // Strip whitespace
+  let sanitizedInput = input.trim();
+
+  // Escape the HTML-sensitive special characters into their HTML forms
+  // Define HTML definitions of characters that need to be encoded.
+  const htmlEscapeSymbols = {
+    '&':    "&amp;",
+    '\"':  "&quot;",
+    '\'':  "&#39;",
+    '\\': "&#x2F;",
+    '<':     "&lt;",
+    '>':  "&gt;"
+  }
+
+  // For each entry in htmlEscapeSymbols, replace the key with the value
+  for (symbol in htmlEscapeSymbols) {
+    // const regex = new RegExp(symbol, 'g');  // Matches all occurrences instead of just the first one
+    sanitizedInput = sanitizedInput.replaceAll(symbol, htmlEscapeSymbols[symbol]);
+  }
+
+  return sanitizedInput;
+}; 
+
 module.exports = {
   apiLimiter,
   validateAPI,
-  constantTimeComparison
+  constantTimeComparison,
+  sanitizeInput,
 };
