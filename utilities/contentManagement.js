@@ -1,12 +1,13 @@
 const multer = require('multer');
-const { body, validationResult } = require('express-validator');
 
 const { BadRequestErr, ConflictErr } = require('./customErrors');
+const { AllowedFiletypes, sanitizeFilename, sanitizeInputForHTML } = require('./security');
 const DBQuery = require('../utilities/dbHandler').DBQuery;
 
 require(`dotenv`).config();
 
-// Classes to throw errors with
+
+
 
 // The content management class handles the functionality for uploading and deleting 
 class ContentManagement {
@@ -14,19 +15,12 @@ class ContentManagement {
     this.FILE_BUCKET = require('../utilities/file-bucket-sdk');
     this.dbHandler = require('../utilities/dbHandler').dbHandlerInstance;
     this.easyStore = new this.FILE_BUCKET.EasyStore();
-    
-    this.JPG_TYPE = 'image/jpeg';
-    this.PNG_TYPE = 'image/png';
-    this.GIF_TYPE = 'image/gif';
-    this.ALLOWED_FILETYPES = [
-      this.JPG_TYPE, 
-      this.PNG_TYPE, 
-      this.GIF_TYPE
-    ];
+    this.filetypeValidator = new AllowedFiletypes();
   }
 
   // Public Methods (used by endpoints)
 
+  // Put a file into the file bucket and send its details to the database
   putFile = async (req, res) => {
     try {
       // Validate the image is valid for upload and the request has all required information
@@ -65,14 +59,15 @@ class ContentManagement {
     return `Successfully uploaded: ${process.env.FILE_BUCKET_ENDPOINT}/${req.file.originalname}`;
   };
 
-  // Remove a file from both the database and the file bucket
+  // Remove a file from the filebucket and remove its details from the database
   deleteFile = async (req, res) => {
 
-    // Verify parameters exist
+    // Verify that req.params exists
     if (!req.params) {
       throw new BadRequestErr('No parameters were included in the request.');
     }
     
+    // Pull the filename out into its own variable
     const filename = req.params.filename;
   
     // Remove image entries from DB
@@ -89,6 +84,7 @@ class ContentManagement {
       throw err;
     }
 
+    // Log success
     return `${filename} removed successfully.`;
   };
 
@@ -244,10 +240,15 @@ class ContentManagement {
       throw new BadRequestErr('Description and alt text must be included in the request.');
     }
 
-    // Validate that the filetype provided is allowed (JPG, PNG, GIF)
-    if (!this.#validateFileType(req.file.buffer)) {
-      throw new BadRequestErr('Invalid file type.');
-    }
+    // Sanitize the image metadata for HTML formatting
+    req.body.description = sanitizeInputForHTML(req.body.description);
+    req.body.alt_text = sanitizeInputForHTML(req.body.alt_text);
+
+    // Sanitize the filename for URL formatting
+    req.file.originalname = sanitizeFilename(req.file.originalname);
+
+    // Validate filetype and that the filename matches the filetype
+    this.filetypeValidator.validateFiletypeAndExtension(req.file); 
   };
 
   // Send an image to the file bucket
