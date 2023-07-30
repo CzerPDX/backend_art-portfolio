@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { validateAPI, apiLimiter } = require('./utilities/security');
-const dbHandler = require('./utilities/dbHandler');   // Database handler singleton
+const dbHandler = require('./utilities/dbHandler').dbHandlerInstance;  // Database handler singleton
 const app = express();   
 
 // Used to gracefully shut down the server
@@ -29,6 +29,11 @@ app.all('*', (req, res, next) => {
 
 // Middleware
 //  Validate request's api key before proceeding
+try {
+
+} catch (err) {
+  
+}
 app.use(validateAPI);
 // Use rate IP-based rate limiting
 app.use(apiLimiter);
@@ -42,6 +47,10 @@ app.use('/delete', uploadDeleteRoutes);
 // DB Routes
 const dbRoutes = require('./routes/dbRoutes');
 app.use('/db', dbRoutes);
+
+// User Routes
+const userRoutes = require('./routes/userRoutes');
+app.use('/user', userRoutes);
 
 // Start the server
 app.listen(port, async () => {
