@@ -7,8 +7,6 @@ const DBQuery = require('../utilities/dbHandler').DBQuery;
 require(`dotenv`).config();
 
 
-
-
 // The content management class handles the functionality for uploading and deleting 
 class ContentManagement {
   constructor() {

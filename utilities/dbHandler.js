@@ -173,7 +173,8 @@ class DBHandler {
           host:       process.env.DB_HOST,
           port:       process.env.DB_PORT,
           database:   process.env.ART_DB_NAME,
-          ssl:        false
+          ssl:        false,
+          idleTimeoutMillis: 0
         });
   
         // Resovle the promise by providing the pool
@@ -196,7 +197,8 @@ class DBHandler {
         host:       process.env.DB_HOST,
         port:       process.env.DB_PORT,
         database:   process.env.ART_DB_NAME,
-        ssl:        false
+        ssl:        false,
+        idleTimeoutMillis: 0
       });
     } catch (err) {
       console.error(err.message);
