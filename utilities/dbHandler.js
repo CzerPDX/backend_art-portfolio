@@ -106,7 +106,7 @@ class DBHandler {
     } catch (err) {
       // If an err has occurred, roll back the transaction to undo all changes
       console.error(err.detail);
-      console.log('Rolling back commit...')
+      console.log('Rolling back commit...');
       try {
         await client.query('ROLLBACK');
         console.log('Commit rollback');
@@ -115,9 +115,9 @@ class DBHandler {
         throw new TransactionErr(`Failed to rollback transaction: ${err.message}`);
       }
       if (err.code === duplicateDBErrCode) {
-        throw new ConflictErr(`Constraint error: ${err.constraint}`)
+        throw new ConflictErr(`Constraint error: ${err.constraint}`);
       }
-      throw new TransactionErr(`Database err: ${err.message}`);
+      throw new TransactionErr(`Database error: ${err.message}`);
     } finally {
       // Close out client
       if (client) {

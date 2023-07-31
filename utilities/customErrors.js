@@ -15,15 +15,25 @@ const getHttpCodeFromError = (err) => {
 
 // Custom error classes
 
-// The http request has missing or malformed arguments
-class BadRequestErr extends Error {
+
+
+// General Errors
+
+// This is for missing or malformed data. 
+// If a function requires something and it isn't provided or isn't provided in the proper format, use this error
+class DataValidationError extends Error {
   constructor(message) {
       super(message);
-      this.name = "BadRequestErr";
+      this.name = "DataValidationError";
       this.httpCode = 400;
   }
 };
 
+
+
+// Database Errors
+
+// error encountered when trying to release the database client
 class ClientReleaseErr extends Error {
   constructor(message) {
     super(message);
@@ -33,7 +43,7 @@ class ClientReleaseErr extends Error {
   }
 }
 
-// Trying to add a resource to the database that contains a value in its
+// Error encountered when trying to add a resource to the database that contains a value in its
 // data that already exists and is required to be unique
 class ConflictErr extends Error {
   constructor(message) {
@@ -43,6 +53,7 @@ class ConflictErr extends Error {
   }
 };
 
+// Error encountered when trying to connect to the database
 class DBConnectionErr extends Error {
   constructor(message) {
     super(message);
@@ -52,7 +63,7 @@ class DBConnectionErr extends Error {
   }
 };
 
-
+// Error encountered when running a database transaction
 class TransactionErr extends Error {
   constructor(message) {
     super(message);
@@ -65,7 +76,7 @@ class TransactionErr extends Error {
 
 module.exports = {
   getHttpCodeFromError,
-  BadRequestErr,
+  DataValidationError,
   ClientReleaseErr,
   ConflictErr,
   DBConnectionErr,

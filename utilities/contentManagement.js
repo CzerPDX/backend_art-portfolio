@@ -1,6 +1,6 @@
 const multer = require('multer');
 
-const { BadRequestErr, ConflictErr } = require('./customErrors');
+const { DataValidationError, ConflictErr } = require('./customErrors');
 const { AllowedFiletypes, sanitizeFilename, sanitizeInputForHTML } = require('./security');
 const DBQuery = require('../utilities/dbHandler').DBQuery;
 
@@ -62,7 +62,7 @@ class ContentManagement {
 
     // Verify that req.params exists
     if (!req.params) {
-      throw new BadRequestErr('No parameters were included in the request.');
+      throw new DataValidationError('No parameters were included in the request.');
     }
     
     // Pull the filename out into its own variable
@@ -99,7 +99,6 @@ class ContentManagement {
       return allImagesQuery.rows;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -125,7 +124,6 @@ class ContentManagement {
       return imagesByTagNameQuery.rows;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -150,7 +148,6 @@ class ContentManagement {
       return retArr;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -203,20 +200,10 @@ class ContentManagement {
           return 'unknown';
       }
     } catch (err) {
-      console.error(`Error checking file type: ${err.message}`);
-      throw err;
+      throw new DataValidationError(`Error checking file type: ${err.message}`);
     }
   };
 
-  // Returns true or false based on whether the filetype is allowed
-  #validateFileType = (incomingFile) => {
-    try {
-      const fileType = this.#checkFileType(incomingFile);
-      return this.ALLOWED_FILETYPES.includes(fileType);
-    } catch (err) {
-      throw err;
-    }
-  };
 
   // Validate file and request details and file are valid/present before uploading
   #validateImageForUpload = async (req, res) => {
@@ -225,28 +212,33 @@ class ContentManagement {
 
     // Verify that a file was provided
     if (!req.file) {
-      throw new BadRequestErr('No file was included in the request to the backend.');
+      throw new DataValidationError('No file was included in the request to the backend.');
     }
 
     // Validate that a body was included
     if (!req.body) {
-      throw new BadRequestErr('No body was included in the upload request');
+      throw new DataValidationError('No body was included in the upload request');
     }
 
     // Validate that a description and alt_text was included
     if (!req.body.description || !req.body.alt_text) {
-      throw new BadRequestErr('Description and alt text must be included in the request.');
+      throw new DataValidationError('Description and alt text must be included in the request.');
     }
 
-    // Sanitize the image metadata for HTML formatting
-    req.body.description = sanitizeInputForHTML(req.body.description);
-    req.body.alt_text = sanitizeInputForHTML(req.body.alt_text);
+    try {
+      // Sanitize the image metadata for HTML formatting
+      req.body.description = sanitizeInputForHTML(req.body.description);
+      req.body.alt_text = sanitizeInputForHTML(req.body.alt_text);
 
-    // Sanitize the filename for URL formatting
-    req.file.originalname = sanitizeFilename(req.file.originalname);
+      // Sanitize the filename for URL formatting
+      req.file.originalname = sanitizeFilename(req.file.originalname);
 
-    // Validate filetype and that the filename matches the filetype
-    this.filetypeValidator.validateFiletypeAndExtension(req.file); 
+      // Validate filetype and that the filename matches the filetype
+      this.filetypeValidator.validateFiletypeAndExtension(req.file); 
+    } catch (err) {
+      throw err;
+    }
+    
   };
 
   // Send an image to the file bucket
@@ -398,7 +390,6 @@ class ContentManagement {
       return retArr;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -408,7 +399,6 @@ class ContentManagement {
     try {
       await this.dbHandler.executeQueries([this.#addImageTagAssocQuery(filename, tagName)]);
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -433,7 +423,6 @@ class ContentManagement {
       await this.dbHandler.executeQueries([removeAssocQuery]);
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -454,7 +443,6 @@ class ContentManagement {
       return getAllAssocsQuery.rows;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -483,7 +471,6 @@ class ContentManagement {
       await this.dbHandler.executeQueries([removeAssocByFilenameQuery, removeImageQuery]);
 
     } catch (err) {
-      console.error(err.message);
       throw(err);
     }
   };
