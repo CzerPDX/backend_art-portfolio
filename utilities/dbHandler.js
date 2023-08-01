@@ -79,6 +79,12 @@ class DBHandler {
   executeQueries = async (dbQueries) => {
     let client;
 
+    // Verify that dbQueries: exists, is an array, and the array is made of DBQuery objects
+    if ((!dbQueries) || (!Array.isArray(dbQueries)) || (!dbQueries.every(query => query instanceof DBQuery))) {
+      console.error('Error: executeQueries requires an array of DBQuery objects as input');
+      throw new Error('Invalid query format.');
+    }    
+
     try {
       client = await this.pool.connect();
     } catch (err) {
