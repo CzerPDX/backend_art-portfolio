@@ -187,7 +187,6 @@ class AllowedFiletypes {
     try {
       // Make sure the filetype is allowed and, if so, get the keyname that is used for it in this.allowedFiletypes
       const filetypeKeyname = this.#getFiletypeKeyname(incomingFile.buffer);
-      console.log(`Filetype is ${filetypeKeyname}`);
 
       // Validate the incomingFile's file extension matches the filetype it is
       this.#validateFilenameExt(filetypeKeyname, incomingFile.originalname)

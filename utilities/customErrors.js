@@ -2,8 +2,9 @@
 
 const GENERAL_HTTP_ERROR_CODE = 500;
 
-// Return http error code for custom errors
-// Otherwise (if one does not exist) return the general http error code
+// Return http error code for both custom and errors
+// Errors that have a field for httpCode will return that code (ie: 404, 409, 500, etc)
+// Otherwise if the field is undefined, the general server error http code is returned
 const getHttpCodeFromError = (err) => {
   let httpCode = GENERAL_HTTP_ERROR_CODE;
   if (err.httpCode) {
@@ -15,15 +16,22 @@ const getHttpCodeFromError = (err) => {
 
 // Custom error classes
 
-// The http request has missing or malformed arguments
+// General Errors
+
+// Error validating request
+// This is for missing or malformed info/resources from the frontend
 class BadRequestErr extends Error {
   constructor(message) {
-      super(message);
-      this.name = "BadRequestErr";
-      this.httpCode = 400;
+    super(message);
+    this.name = "BadRequestErr";
+    this.httpCode = 400;
   }
 };
 
+
+// Database Errors
+
+// error encountered when trying to release the database client
 class ClientReleaseErr extends Error {
   constructor(message) {
     super(message);
@@ -31,9 +39,9 @@ class ClientReleaseErr extends Error {
     this.code = 'DB_CLIENT_RELEASE_FAILURE';
     this.httpCode = 500;
   }
-}
+};
 
-// Trying to add a resource to the database that contains a value in its
+// Error encountered when trying to add a resource to the database that contains a value in its
 // data that already exists and is required to be unique
 class ConflictErr extends Error {
   constructor(message) {
@@ -43,6 +51,7 @@ class ConflictErr extends Error {
   }
 };
 
+// Error encountered when trying to connect to the database
 class DBConnectionErr extends Error {
   constructor(message) {
     super(message);
@@ -52,7 +61,7 @@ class DBConnectionErr extends Error {
   }
 };
 
-
+// Error encountered when running a database transaction
 class TransactionErr extends Error {
   constructor(message) {
     super(message);
@@ -60,7 +69,7 @@ class TransactionErr extends Error {
     this.code = 'DB_TRANSACTION_FAILURE';
     this.httpCode = 503;
   }
-}
+};
 
 
 module.exports = {

@@ -29,7 +29,7 @@ class ContentManagement {
 
     // Send the image data to the database
     try {
-      await this.#sendImageDataToDB(req, res);
+      await this.#sendImageDataToDB(req);
     } catch (err) {
       // Specific handling for unique key constraint issues
       if (err.code === 'DB_PKEY_FAILURE') {
@@ -43,7 +43,7 @@ class ContentManagement {
 
     // Try to send the file to the image bucket
     try {
-      await this.#uploadImageToBucket(req, res);
+      await this.#uploadImageToBucket(req);
     } catch (err) {
       // If uploading to the bucket failed, try to remove the entry from the database 
       try {
@@ -58,7 +58,7 @@ class ContentManagement {
   };
 
   // Remove a file from the filebucket and remove its details from the database
-  deleteFile = async (req, res) => {
+  deleteFile = async (req) => {
 
     // Verify that req.params exists
     if (!req.params) {
@@ -99,7 +99,6 @@ class ContentManagement {
       return allImagesQuery.rows;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -125,7 +124,6 @@ class ContentManagement {
       return imagesByTagNameQuery.rows;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -150,7 +148,6 @@ class ContentManagement {
       return retArr;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -177,46 +174,6 @@ class ContentManagement {
     });
   };
 
-  // Checks the file type based on the first 4 bytes of the file
-  #checkFileType = (buffer) => {
-    try {
-      // Convert the first 4 bytes of the file into a hexadecimal string
-      const magicNumber = buffer.toString('hex', 0, 4);
-
-      switch (magicNumber) {
-        // JPEG Cases
-        case 'ffd8ffe0':
-        case 'ffd8ffe1':
-        case 'ffd8ffe2':
-          return this.JPG_TYPE;
-
-        // PNG Case
-        case '89504e47':
-          return this.PNG_TYPE;
-
-        // GIF Cases
-        case '47494638':
-          return this.GIF_TYPE;
-
-        // Else
-        default:
-          return 'unknown';
-      }
-    } catch (err) {
-      console.error(`Error checking file type: ${err.message}`);
-      throw err;
-    }
-  };
-
-  // Returns true or false based on whether the filetype is allowed
-  #validateFileType = (incomingFile) => {
-    try {
-      const fileType = this.#checkFileType(incomingFile);
-      return this.ALLOWED_FILETYPES.includes(fileType);
-    } catch (err) {
-      throw err;
-    }
-  };
 
   // Validate file and request details and file are valid/present before uploading
   #validateImageForUpload = async (req, res) => {
@@ -238,19 +195,24 @@ class ContentManagement {
       throw new BadRequestErr('Description and alt text must be included in the request.');
     }
 
-    // Sanitize the image metadata for HTML formatting
-    req.body.description = sanitizeInputForHTML(req.body.description);
-    req.body.alt_text = sanitizeInputForHTML(req.body.alt_text);
+    try {
+      // Sanitize the image metadata for HTML formatting
+      req.body.description = sanitizeInputForHTML(req.body.description);
+      req.body.alt_text = sanitizeInputForHTML(req.body.alt_text);
 
-    // Sanitize the filename for URL formatting
-    req.file.originalname = sanitizeFilename(req.file.originalname);
+      // Sanitize the filename for URL formatting
+      req.file.originalname = sanitizeFilename(req.file.originalname);
 
-    // Validate filetype and that the filename matches the filetype
-    this.filetypeValidator.validateFiletypeAndExtension(req.file); 
+      // Validate filetype and that the filename matches the filetype
+      this.filetypeValidator.validateFiletypeAndExtension(req.file); 
+    } catch (err) {
+      throw err;
+    }
+    
   };
 
   // Send an image to the file bucket
-  #uploadImageToBucket = async (req, res) => {
+  #uploadImageToBucket = async (req) => {
     try {
       // Upload the file to the image bucket
       const params = {
@@ -283,7 +245,7 @@ class ContentManagement {
 
 
   // Private Database Functions
-  #sendImageDataToDB = async (req, res) => {
+  #sendImageDataToDB = async (req) => {
     try {
       // Send image's metadata to the database
       const filename = req.file.originalname;
@@ -352,7 +314,6 @@ class ContentManagement {
       await this.dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -371,7 +332,6 @@ class ContentManagement {
       await this.dbHandler.executeQueries([addTagQuery]);
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -398,7 +358,6 @@ class ContentManagement {
       return retArr;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -408,7 +367,6 @@ class ContentManagement {
     try {
       await this.dbHandler.executeQueries([this.#addImageTagAssocQuery(filename, tagName)]);
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -433,7 +391,6 @@ class ContentManagement {
       await this.dbHandler.executeQueries([removeAssocQuery]);
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -454,7 +411,6 @@ class ContentManagement {
       return getAllAssocsQuery.rows;
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -483,7 +439,6 @@ class ContentManagement {
       await this.dbHandler.executeQueries([removeAssocByFilenameQuery, removeImageQuery]);
 
     } catch (err) {
-      console.error(err.message);
       throw(err);
     }
   };

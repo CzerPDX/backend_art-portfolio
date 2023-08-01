@@ -55,8 +55,9 @@ class DBHandler {
         console.error('err: Tried to open pool, but pool was already open.');
       }
     } catch (err) {
-      console.error(err.message);
-      throw err;
+      const errMsg = 'Error setting up database';
+      console.error(`${errMsg}: ${err.message}`);
+      throw new Error(errMsg);
     }
   };
 
@@ -67,8 +68,9 @@ class DBHandler {
         this.pool.end();
         console.log('Pool closed')
       } catch (err) {
-        console.error(`err closing pool: ${err.message}`);
-        throw err;
+        const errMsg = 'Error closing pool.';
+        console.error(`${errMsg}: ${err.message}`);
+        throw new Error(errMsg);
       }
     }
   };
@@ -79,11 +81,19 @@ class DBHandler {
   executeQueries = async (dbQueries) => {
     let client;
 
+    // Verify that dbQueries: exists, is an array, and that the array consists of DBQuery objects
+    if ((!dbQueries) || (!Array.isArray(dbQueries)) || (!dbQueries.every(query => query instanceof DBQuery))) {
+      console.error('Error: executeQueries requires an array of DBQuery objects as input');
+      throw new Error('Invalid query format.');
+    }    
+
+    // Get a new client so it can use the db pool
     try {
       client = await this.pool.connect();
     } catch (err) {
-      console.error(err.message);
-      throw new DBConnectionErr(err.message);
+      const errMsg = 'Error connecting to database.';
+      console.error(`${errMsg}: ${err.message}`);
+      throw new DBConnectionErr(errMsg);
     }
     
     try {
@@ -103,33 +113,46 @@ class DBHandler {
       }
       // Commit the transaction if arrived here without err
       await client.query('COMMIT');
+
     } catch (err) {
+
       // If an err has occurred, roll back the transaction to undo all changes
       console.error(err.detail);
-      console.log('Rolling back commit...')
+      console.log('Rolling back commit...');
       try {
         await client.query('ROLLBACK');
         console.log('Commit rollback');
       } catch (err) {
-        // console.error(`Failed to rollback transaction: ${err.message}`);
-        throw new TransactionErr(`Failed to rollback transaction: ${err.message}`);
+        const errMsg = 'Failed to rollback transaction';
+        console.error(`${errMsg}: ${err.message}`);
+        throw new TransactionErr(errMsg);
       }
+
+      // Check if the error is a unique key constraint
       if (err.code === duplicateDBErrCode) {
-        throw new ConflictErr(`Constraint error: ${err.constraint}`)
+        throw new ConflictErr(`Constraint error: ${err.constraint}`);
       }
-      throw new TransactionErr(`Database err: ${err.message}`);
+
+      // Otherwise throw a generic transaction error
+      const errMsg = 'Database error';
+      console.error(`${errMsg}: ${err.message}`);
+      throw new TransactionErr(errMsg);
+
     } finally {
-      // Close out client
       if (client) {
         try {
+          // Release the clien tback into the pool
           await client.release();
         } catch (err) {
-          throw new ClientReleaseErr(`Failed to release client: ${err.message}`);
+          const errMsg = 'Failed to release client.';
+          console.error(`${errMsg}: ${err.message}`);
+          throw new ClientReleaseErr(errMsg);
         }
       }
     }    
   };
 
+  
   // Private Methods
 
   // Set up a local database pool using SSH into webhosting server
@@ -182,7 +205,7 @@ class DBHandler {
   
       } catch (err) {
         // Reject the promise if there's an err
-        console.error('err setting up local pool: ', err.message);
+        console.error(`Error setting up local pool:  ${err.message}`);
         reject(err); 
       }
     });
@@ -201,7 +224,7 @@ class DBHandler {
         idleTimeoutMillis: 0
       });
     } catch (err) {
-      console.error(err.message);
+      console.error(`Error setting up production pool:  ${err.message}`);
       throw err;
     }   
   };

@@ -140,3 +140,11 @@ Returns:
 
 # Testing
 This application uses jest for testing. To run tests type `npm run test` in the command line.
+
+# Structure
+
+## Error Handling
+When an error is thrown from a lower layer it propagates up through the higher layers until it arrives at a place where it can be handled. Usually this is when it reaches the route handling level. The route handlers send the http responses when an error is caught. Custom errors have been given an httpCode field, but if the field does not exist, a general 500 error is thrown.
+
+### Custom errors
+Custom errors contain an additional field for httpCodes in `utilities/customErrors.js`. 
