@@ -79,12 +79,13 @@ class DBHandler {
   executeQueries = async (dbQueries) => {
     let client;
 
-    // Verify that dbQueries: exists, is an array, and the array is made of DBQuery objects
+    // Verify that dbQueries: exists, is an array, and that the array consists of DBQuery objects
     if ((!dbQueries) || (!Array.isArray(dbQueries)) || (!dbQueries.every(query => query instanceof DBQuery))) {
       console.error('Error: executeQueries requires an array of DBQuery objects as input');
       throw new Error('Invalid query format.');
     }    
 
+    // Get a new client so it can use the db pool
     try {
       client = await this.pool.connect();
     } catch (err) {
@@ -109,7 +110,9 @@ class DBHandler {
       }
       // Commit the transaction if arrived here without err
       await client.query('COMMIT');
+
     } catch (err) {
+
       // If an err has occurred, roll back the transaction to undo all changes
       console.error(err.detail);
       console.log('Rolling back commit...');
@@ -117,17 +120,21 @@ class DBHandler {
         await client.query('ROLLBACK');
         console.log('Commit rollback');
       } catch (err) {
-        // console.error(`Failed to rollback transaction: ${err.message}`);
         throw new TransactionErr(`Failed to rollback transaction: ${err.message}`);
       }
+
+      // Check if the error is a unique key constraint
       if (err.code === duplicateDBErrCode) {
         throw new ConflictErr(`Constraint error: ${err.constraint}`);
       }
+
+      // Otherwise throw a generic transaction error
       throw new TransactionErr(`Database error: ${err.message}`);
+
     } finally {
-      // Close out client
       if (client) {
         try {
+          // Release the clien tback into the pool
           await client.release();
         } catch (err) {
           throw new ClientReleaseErr(`Failed to release client: ${err.message}`);
@@ -136,6 +143,7 @@ class DBHandler {
     }    
   };
 
+  
   // Private Methods
 
   // Set up a local database pool using SSH into webhosting server
