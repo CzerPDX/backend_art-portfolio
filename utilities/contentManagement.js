@@ -1,6 +1,6 @@
 const multer = require('multer');
 
-const { DataValidationError, ConflictErr } = require('./customErrors');
+const { BadRequestErr, ConflictErr } = require('./customErrors');
 const { AllowedFiletypes, sanitizeFilename, sanitizeInputForHTML } = require('./security');
 const DBQuery = require('../utilities/dbHandler').DBQuery;
 
@@ -29,7 +29,7 @@ class ContentManagement {
 
     // Send the image data to the database
     try {
-      await this.#sendImageDataToDB(req, res);
+      await this.#sendImageDataToDB(req);
     } catch (err) {
       // Specific handling for unique key constraint issues
       if (err.code === 'DB_PKEY_FAILURE') {
@@ -43,7 +43,7 @@ class ContentManagement {
 
     // Try to send the file to the image bucket
     try {
-      await this.#uploadImageToBucket(req, res);
+      await this.#uploadImageToBucket(req);
     } catch (err) {
       // If uploading to the bucket failed, try to remove the entry from the database 
       try {
@@ -58,11 +58,11 @@ class ContentManagement {
   };
 
   // Remove a file from the filebucket and remove its details from the database
-  deleteFile = async (req, res) => {
+  deleteFile = async (req) => {
 
     // Verify that req.params exists
     if (!req.params) {
-      throw new DataValidationError('No parameters were included in the request.');
+      throw new BadRequestErr('No parameters were included in the request.');
     }
     
     // Pull the filename out into its own variable
@@ -174,36 +174,6 @@ class ContentManagement {
     });
   };
 
-  // Checks the file type based on the first 4 bytes of the file
-  #checkFileType = (buffer) => {
-    try {
-      // Convert the first 4 bytes of the file into a hexadecimal string
-      const magicNumber = buffer.toString('hex', 0, 4);
-
-      switch (magicNumber) {
-        // JPEG Cases
-        case 'ffd8ffe0':
-        case 'ffd8ffe1':
-        case 'ffd8ffe2':
-          return this.JPG_TYPE;
-
-        // PNG Case
-        case '89504e47':
-          return this.PNG_TYPE;
-
-        // GIF Cases
-        case '47494638':
-          return this.GIF_TYPE;
-
-        // Else
-        default:
-          return 'unknown';
-      }
-    } catch (err) {
-      throw new DataValidationError(`Error checking file type: ${err.message}`);
-    }
-  };
-
 
   // Validate file and request details and file are valid/present before uploading
   #validateImageForUpload = async (req, res) => {
@@ -212,17 +182,17 @@ class ContentManagement {
 
     // Verify that a file was provided
     if (!req.file) {
-      throw new DataValidationError('No file was included in the request to the backend.');
+      throw new BadRequestErr('No file was included in the request to the backend.');
     }
 
     // Validate that a body was included
     if (!req.body) {
-      throw new DataValidationError('No body was included in the upload request');
+      throw new BadRequestErr('No body was included in the upload request');
     }
 
     // Validate that a description and alt_text was included
     if (!req.body.description || !req.body.alt_text) {
-      throw new DataValidationError('Description and alt text must be included in the request.');
+      throw new BadRequestErr('Description and alt text must be included in the request.');
     }
 
     try {
@@ -242,7 +212,7 @@ class ContentManagement {
   };
 
   // Send an image to the file bucket
-  #uploadImageToBucket = async (req, res) => {
+  #uploadImageToBucket = async (req) => {
     try {
       // Upload the file to the image bucket
       const params = {
@@ -275,7 +245,7 @@ class ContentManagement {
 
 
   // Private Database Functions
-  #sendImageDataToDB = async (req, res) => {
+  #sendImageDataToDB = async (req) => {
     try {
       // Send image's metadata to the database
       const filename = req.file.originalname;

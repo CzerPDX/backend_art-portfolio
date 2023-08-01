@@ -1,7 +1,7 @@
 const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 
-const { DataValidationError } = require('./customErrors');
+const { BadRequestErr } = require('./customErrors');
 
 
 // Compare API keys with constant time to mitigate timing attacks
@@ -53,12 +53,12 @@ const sanitizeInputForHTML = (input) => {
 
   // Verify that input is not undefined
   if (!input) {
-    throw new DataValidationError('No input provided.');
+    throw new BadRequestErr('No input provided.');
   }
 
   // Verify that input is a string
   if (typeof input !== "string") {
-    throw new DataValidationError('Please only provide a string as input.');
+    throw new BadRequestErr('Please only provide a string as input.');
   }
 
   // Allowed characters: 
@@ -67,7 +67,7 @@ const sanitizeInputForHTML = (input) => {
 
   // Verify that the input only contains valid characters
   if (!allowedCharsRegex.test(input)) {
-    throw new DataValidationError('Input contains invalid characters.');
+    throw new BadRequestErr('Input contains invalid characters.');
   }
 
   // Strip whitespace
@@ -99,12 +99,12 @@ const sanitizeFilename = (filename) => {
 
   // Verify that filename is not undefined
   if (!filename) {
-    throw new DataValidationError('No filename provided.');
+    throw new BadRequestErr('No filename provided.');
   }
 
   // Verify that input is a string
   if (typeof filename !== "string") {
-    throw new DataValidationError('Please only provide a string as input.');
+    throw new BadRequestErr('Please only provide a string as input.');
   }
 
   // Allowed format: 
@@ -124,7 +124,7 @@ const sanitizeFilename = (filename) => {
     } else {
       errMsg = 'Invalid charcters in filename. Filenames may only include alphanumeric characters, periods, dashes, or underscores';
     }
-    throw new DataValidationError(errMsg);
+    throw new BadRequestErr(errMsg);
   }
 
   // Strip whitespace
@@ -221,7 +221,7 @@ class AllowedFiletypes {
     }
 
     if (!retKey) {
-      throw new DataValidationError('Invalid filetype.');
+      throw new BadRequestErr('Invalid filetype.');
     }
 
     return retKey;

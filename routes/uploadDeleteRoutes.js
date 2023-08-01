@@ -15,7 +15,7 @@ const { getHttpCodeFromError } = require('../utilities/customErrors');
 router.delete('/:filename', async (req, res) => {
   try {
     // Remove the file using the ContentManagement class' deleteFile method
-    const successMsg = await contentManagement.deleteFile(req, res);
+    const successMsg = await contentManagement.deleteFile(req);
 
     // Send http response
     return res.send({ message: successMsg });
