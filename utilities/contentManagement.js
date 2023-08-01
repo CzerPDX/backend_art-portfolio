@@ -314,7 +314,6 @@ class ContentManagement {
       await this.dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
@@ -333,7 +332,6 @@ class ContentManagement {
       await this.dbHandler.executeQueries([addTagQuery]);
 
     } catch (err) {
-      console.error(err.message);
       throw err;
     }
   };
