@@ -52,12 +52,12 @@ class DBHandler {
         this.pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
         console.log('Pool open');
       } else {
-        console.error('err: Tried to open pool, but pool was already open.');
+        console.error('Error: Tried to open pool, but pool was already open.');
       }
     } catch (err) {
-      const errMsg = 'Error setting up database';
+      const errMsg = 'Unable to set up database pool';
       console.error(`${errMsg}: ${err.message}`);
-      throw new Error(errMsg);
+      throw new DBConnectionErr(errMsg);
     }
   };
 
@@ -68,9 +68,9 @@ class DBHandler {
         this.pool.end();
         console.log('Pool closed')
       } catch (err) {
-        const errMsg = 'Error closing pool.';
+        const errMsg = 'Unable to close pool';
         console.error(`${errMsg}: ${err.message}`);
-        throw new Error(errMsg);
+        throw new DBConnectionErr(errMsg);
       }
     }
   };
@@ -83,15 +83,15 @@ class DBHandler {
 
     // Verify that dbQueries: exists, is an array, and that the array consists of DBQuery objects
     if ((!dbQueries) || (!Array.isArray(dbQueries)) || (!dbQueries.every(query => query instanceof DBQuery))) {
-      console.error('Error: executeQueries requires an array of DBQuery objects as input');
-      throw new Error('Invalid query format.');
+      console.error('Error: executeQueries requires an array of DBQuery objects as input.');
+      throw new Error('Invalid query format');
     }    
 
     // Get a new client so it can use the db pool
     try {
       client = await this.pool.connect();
     } catch (err) {
-      const errMsg = 'Error connecting to database.';
+      const errMsg = 'Unable to get new client from pool';
       console.error(`${errMsg}: ${err.message}`);
       throw new DBConnectionErr(errMsg);
     }
@@ -144,7 +144,7 @@ class DBHandler {
           // Release the clien tback into the pool
           await client.release();
         } catch (err) {
-          const errMsg = 'Failed to release client.';
+          const errMsg = 'Failed to release client';
           console.error(`${errMsg}: ${err.message}`);
           throw new ClientReleaseErr(errMsg);
         }
