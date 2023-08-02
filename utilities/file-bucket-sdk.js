@@ -64,7 +64,7 @@ class EasyStore {
   async delete(params) {
     const options = {
       baseURL: this.endpoint,
-      url: `/delete/${params.Bucket}/${params.Key}`,
+      url: `/${params.Bucket}/${params.Key}`,
       method: 'DELETE',
       headers: {
         'x-api-key': this.apiKey,
