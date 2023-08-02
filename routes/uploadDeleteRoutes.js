@@ -33,8 +33,8 @@ router.delete('/:filename', async (req, res) => {
 // Upload a file to the content directory
 router.put('/', async (req, res) => {
   try {
-    await contentManagement.putFile(req, res);
-    res.status(200).send({ message: `Successfully uploaded: ${process.env.FILE_BUCKET_ENDPOINT}/${req.file.originalname}` });
+    const successMsg = await contentManagement.putFile(req, res);
+    res.status(200).send({ message: successMsg });
   } catch (err) {
     // Setup error message and log it
     const errMsg = `Error of type ${err.name} when uploading file to bucket: ${err.message}`;
