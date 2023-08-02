@@ -28,8 +28,9 @@ class ContentManagement {
     }
 
     // Send the image data to the database
+    let databaseResult;
     try {
-      await this.#sendImageDataToDB(req);
+      databaseResult = await this.#sendImageDataToDB(req);
     } catch (err) {
       // Specific handling for unique key constraint issues
       if (err.code === 'DB_PKEY_FAILURE') {
@@ -54,7 +55,7 @@ class ContentManagement {
       throw new Error(`Error uploading to image bucket: ${err.message}`);
     }
     
-    return `Successfully uploaded: ${process.env.FILE_BUCKET_ENDPOINT}/${req.file.originalname}`;
+    return `Successfully uploaded to server: ${process.env.FILE_BUCKET_ENDPOINT}/${req.file.originalname}. ${databaseResult}`;
   };
 
   // Remove a file from the filebucket and remove its details from the database
@@ -152,6 +153,56 @@ class ContentManagement {
     }
   };
 
+  // Removes a tag from the portfolio_tags table
+  // It will also remove related tag entries from the portfolio_image_tags_assoc table
+  // If it succeeds it will return true. Failure will throw an err
+  removeImageTagFromDB = async (tagName) => {
+    try {
+      // Setup Queries
+      // First, remove tag entries from the portfolio_image_tags_assoc table associated with tagName
+      const removeAssocsByTagQueryText = `
+      DELETE FROM portfolio_image_tags_assoc assoc
+      WHERE assoc.tag_id = (
+        SELECT tags.tag_id
+        FROM portfolio_tags tags
+        WHERE tags.tag_name = $1
+      )`;
+      const removeAssocsByTagQueryParams = [tagName];
+      const removeAssocsByTagQuery = new DBQuery(removeAssocsByTagQueryText, removeAssocsByTagQueryParams);
+
+      // Next, remove the entry from the portfolio_tags database for the tag
+      const removeTagQueryText = `
+      DELETE FROM portfolio_tags tags
+      WHERE tags.tag_name = $1`;
+      const removeTagQueryParams = [tagName];
+      const removeTagQuery = new DBQuery(removeTagQueryText, removeTagQueryParams);
+      
+      // Execute queries
+      await this.dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
+
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  // Add a new tag to the portfolio_tags table for an existing image
+  addImageTagToDB = async (tagName) => {
+    try {
+      // Setup query
+      const addTagQueryText = `
+      INSERT INTO portfolio_tags (tag_name)
+      VALUES ($1)`;
+      const addTagQueryParams = [tagName];
+      const addTagQuery = new DBQuery(addTagQueryText, addTagQueryParams);
+
+      // Exercute query
+      await this.dbHandler.executeQueries([addTagQuery]);
+
+    } catch (err) {
+      throw err;
+    }
+  };
+
 
   // Private Methods
 
@@ -243,11 +294,29 @@ class ContentManagement {
     }
   };
 
+  #getInvalidTags = async(tags) => {
+    // Get a list of all tag names in the database
+    const validTagNames = await this.#getAllTagNames();
+    
+    const invalidTags = [];
+    try {
+      // If any of them don't exist in the database throw an error
+      for (let tagIdx in tags) {
+        if (!validTagNames.includes(tags[tagIdx])) {
+          invalidTags.push(tags[tagIdx]);
+        }
+      }
+      return invalidTags;
+    } catch (err) {
+      throw new BadRequestErr(`Could not validate tag names`);
+    }
+  }
+
 
   // Private Database Functions
   #sendImageDataToDB = async (req) => {
     try {
-      // Send image's metadata to the database
+      // Pull metadata for the image out of the request into friendly variables
       const filename = req.file.originalname;
       const bucketUrl = `${process.env.FILE_BUCKET_ENDPOINT}/${req.file.originalname}`;
       const description = req.body.description;
@@ -261,7 +330,7 @@ class ContentManagement {
         tags = [];
       }
 
-      // Set up queries
+      // Set up queries array
       const queries = [];
 
       // Add a new row to the portfolio_images db with the parameter information
@@ -273,63 +342,33 @@ class ContentManagement {
       // Add the query to the queries list
       queries.push(addImageQuery);
 
-      // Add a query to the queries list for each the filename-tag associations for this image
+      // Add a query to the queries list for each of the valid filename-tag associations for this image
+      const invalidTags = await this.#getInvalidTags(tags)
       for (let tagIdx in tags) {
-        const tagName = tags[tagIdx];
-        queries.push(this.#addImageTagAssocQuery(filename, tagName));
+        // If the tag is not invalid
+        if (!invalidTags.includes(tags[tagIdx])) {
+          const tagName = tags[tagIdx];
+          console.log(`Adding image tag assoc: ${filename}, ${tagName}`);
+          queries.push(this.#addImageTagAssocQuery(filename, tagName));
+        }
       }
 
       // Execute the queries on the queries list
       await this.dbHandler.executeQueries(queries);
-    } catch (err) {
-      throw err;
-    }
-  };
 
-  // Removes a tag from the portfolio_tags table
-  // It will also remove related tag entries from the portfolio_image_tags_assoc table
-  // If it succeeds it will return true. Failure will throw an err
-  #removeImageTagFromDB = async (tagName) => {
-    try {
-      // Setup Queries
-      // First, remove tag entries from the portfolio_image_tags_assoc table associated with tagName
-      const removeAssocsByTagQueryText = `
-      DELETE FROM portfolio_image_tags_assoc assoc
-      WHERE assoc.tag_id = (
-        SELECT tags.tag_id
-        FROM portfolio_tags tags
-        WHERE tags.tag_name = $1
-      )`;
-      const removeAssocsByTagQueryParams = [tagName];
-      const removeAssocsByTagQuery = new DBQuery(removeAssocsByTagQueryText, removeAssocsByTagQueryParams);
+      // Compose success string
+      let retString = `Successfully uploaded image metadata to database.`;
+      let partialErrMsg;
+      if (invalidTags.length > 0) {
+        partialErrMsg = ' However, the following tags did not exist in the database and were not added:';
+        for (let invalidTagIdx in invalidTags) {
+          partialErrMsg = partialErrMsg.concat(` ${invalidTags[invalidTagIdx]}`);
+        }
+        retString = retString.concat(partialErrMsg);
+      }
 
-      // Next, remove the entry from the portfolio_tags database for the tag
-      const removeTagQueryText = `
-      DELETE FROM portfolio_tags tags
-      WHERE tags.tag_name = $1`;
-      const removeTagQueryParams = [tagName];
-      const removeTagQuery = new DBQuery(removeTagQueryText, removeTagQueryParams);
-      
-      // Execute queries
-      await this.dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
-
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  // Add a new tag to the portfolio_tags table for an existing image
-  #addImageTagToDB = async (tagName) => {
-    try {
-      // Setup query
-      const addTagQueryText = `
-      INSERT INTO portfolio_tags (tag_name)
-      VALUES ($1)`;
-      const addTagQueryParams = [tagName];
-      const addTagQuery = new DBQuery(addTagQueryText, addTagQueryParams);
-
-      // Exercute query
-      await this.dbHandler.executeQueries([addTagQuery]);
+      console.log(retString);
+      return retString;
 
     } catch (err) {
       throw err;
@@ -362,17 +401,8 @@ class ContentManagement {
     }
   };
 
-  // Adds a filename-tag association to the assoc table
-  #addImageTagAssocToDB = async (filename, tagName) => {
-    try {
-      await this.dbHandler.executeQueries([this.#addImageTagAssocQuery(filename, tagName)]);
-    } catch (err) {
-      throw err;
-    }
-  };
-
   // Removes a filename-tag association from the assoc table
-  #removeImageTagAssocFromDB = async (filename, tagName) => {
+  removeImageTagAssocFromDB = async (filename, tagName) => {
     try {
       // Set up query
       const removeAssocQueryText = `
