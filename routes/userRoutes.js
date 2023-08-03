@@ -22,9 +22,7 @@ router.post('/register', async (req, res) => {
       return res.status(401).send({ message: errMsg });
     }
   } catch (err) {
-    const errMsg = `An unknown error occurred when checking the admin API key: ${err.message}.`
-    console.error(errMsg);
-    return res.status(500).send({ message: errMsg });
+    handleError(err, res);
   }
 
   // Verify that all required registration data is included in the request
@@ -42,9 +40,7 @@ router.post('/register', async (req, res) => {
     // Set email to lowercase and verify it is in a correct format for an email
     email = email.toLowerCase();
   } catch (err) {
-    const errMsg = `Unknown error setting email to lowercase!`;
-    console.error(errMsg);
-    return res.status(500).send({ message: errMsg });
+    handleError(err, res);
   }
   
   // Check that email is a valid format
