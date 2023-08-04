@@ -5,6 +5,7 @@ const dbHandler = require('./utilities/dbHandler').dbHandlerInstance;  // Databa
 const app = express();   
 
 
+
 // Used to gracefully shut down the server
 const cleanupAndExit = async () => {
   try {

@@ -125,7 +125,8 @@ class ContentManagement {
       await this.dbHandler.executeQueries([allFilenamesQuery]);
 
       // Pull tag names out of object and into an array to be sent to client
-      return allFilenamesQuery.rows.map(row => row.filename);
+      const filenames = allFilenamesQuery.rows.map(row => row.filename);
+      return filenames;
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to get all image filenames`);
@@ -247,28 +248,6 @@ class ContentManagement {
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to get image-tag associations`);
-    }
-  };
-
-  // Get all current tags from the database
-  // Returns an array of tag_name from the database
-  getAllFilenames = async () => {
-    // Returns all the tags currently in the database
-    try {
-      // Set up query
-      const allFilenamesQueryText = `
-      SELECT images.filename
-      FROM portfolio_images images`;
-      const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
-
-      // Execute query
-      await this.dbHandler.executeQueries([allFilenamesQuery]);
-  
-      // Parse the return data in allTagNamesQuery.rows for return to the client
-      return allFilenamesQuery.rows.map(row => row.tag_name);
-
-    } catch (err) {
-      throw getErrToThrow(err, `Failed to get all filenames`);
     }
   };
 
@@ -470,5 +449,7 @@ class ContentManagement {
     }
   }
 }
+
+
 
 module.exports = { ContentManagement };

@@ -4,6 +4,8 @@ const { ContentManagement } = require('./contentManagement');
 const dbHandler = require('./dbHandler').dbHandlerInstance;
 const contentManagement = new ContentManagement();
 
+
+
 require('dotenv').config();
 
 // Utils
@@ -14,10 +16,12 @@ const doesTagNameExist = async (tagName) => {
 
 
 
-// const doesFilenameExist = async (filename) => {
-//   const allFilenames = await dbHandler.getAllFilenames();
-//   return allFilenames.includes(filename);
-// };
+const doesFilenameExist = async (filename) => {
+  const allFilenames = await contentManagement.getAllImageFilenames();
+  console.log('Filenames:');
+  console.log(allFilenames);
+  return allFilenames.includes(filename);
+};
 
 // const doesAssocExist = async (filename, tagName) => {
 //   const allAssocs = await dbHandler.getAllAssocs();
@@ -93,10 +97,10 @@ test('Add and remove a tag from portfolio_tags table', async () => {
 //     // Verify the image does not yet exist
 //     expect(await doesFilenameExist(filename)).toBe(false);
 //     // Add the file and verify it exists now
-//     await dbHandler.addImageToDB(filename, bucketUrl, description, altText);
+//     await contentManagement.addImageToDB(filename, bucketUrl, description, altText);
 //     expect(await doesFilenameExist(filename)).toBe(true);
 //     // Remove the image and verify it no longer exists
-//     await dbHandler.removeImageFromDB(filename);
+//     await contentManagement.removeImageFromDB(filename);
 //     expect(await doesFilenameExist(filename)).toBe(false);
 //   } catch (error) {
 //     console.error(`Test failed with error: ${error}`);
