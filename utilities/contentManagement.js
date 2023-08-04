@@ -228,6 +228,8 @@ class ContentManagement {
     }
   };
 
+  // Mostly used for testing
+  
   // Get all assocs as an array of objects that includes filename and tagName
   getAllImageTagAssocs = async () => {
     try {
@@ -245,6 +247,28 @@ class ContentManagement {
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to get image-tag associations`);
+    }
+  };
+
+  // Get all current tags from the database
+  // Returns an array of tag_name from the database
+  getAllFilenames = async () => {
+    // Returns all the tags currently in the database
+    try {
+      // Set up query
+      const allFilenamesQueryText = `
+      SELECT images.filename
+      FROM portfolio_images images`;
+      const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
+
+      // Execute query
+      await this.dbHandler.executeQueries([allFilenamesQuery]);
+  
+      // Parse the return data in allTagNamesQuery.rows for return to the client
+      return allFilenamesQuery.rows.map(row => row.tag_name);
+
+    } catch (err) {
+      throw getErrToThrow(err, `Failed to get all filenames`);
     }
   };
 

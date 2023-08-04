@@ -54,23 +54,21 @@ test('Add and remove a tag from portfolio_tags table', async () => {
 
   try {
     // Setup test
-    console.log('TESTING');
-    console.log(`Does new tagname exist?   ${await doesTagNameExist(tagName)}`);
-    console.log(`Does existing tagname exist?   ${await doesTagNameExist('illustration')}`);
-    
     // If tag exists, remove it
     if (await doesTagNameExist(tagName)) {
-      await dbHandler.removeImageTagFromDB(tagName);
+      await contentManagement.removeImageTagFromDB(tagName);
     }
-      
+    
     // Begin test
     // Verify the tag does not yet exist
     expect(await doesTagNameExist(tagName)).toBe(false);
     // Add the tag and verify it exists
-    await dbHandler.addTagToDB(tagName);
+    await contentManagement.addImageTagToDB(tagName);
     expect(await doesTagNameExist(tagName)).toBe(true);
+
+    // Cleanup test
     // Remove the tag and verify it no longer exists
-    await dbHandler.removeTagFromDB(tagName)
+    await contentManagement.removeImageTagFromDB(tagName)
     expect(await doesTagNameExist(tagName)).toBe(false);
 
   } catch (error) {
