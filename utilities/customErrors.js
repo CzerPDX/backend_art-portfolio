@@ -1,5 +1,22 @@
 // Utility function(s)
 
+// Figure out what type of error to throw
+const getErrToThrow = (err, contextMessage) => {
+  let retErr;
+  // If the error is already using the custom error classes, just propagate it forward
+  if (err instanceof BaseErr) {
+    retErr = err;
+  } else {
+    // If the wrapper has a custom message
+    if (!contextMessage) {
+      retErr = new ErrWrapper(err.message, err);
+    } else {
+      retErr = new ErrWrapper(contextMessage, err);
+    }
+  }
+  return retErr;
+}
+
 const handleError = async (err, res) => {
 
   // Use default values in case err details were not not provided 
@@ -10,11 +27,29 @@ const handleError = async (err, res) => {
   const publicErrName = err.publicErrName || 'UnknokwnError';
   const publicErrMessage = err.publicErrMessage || 'An unknown error occurred';
 
-  // Log the detailed error messages
-  console.error(`Error of type: ${errName}: ${errMessage}`);
+  // Special responses
 
-  // Send HTTP response using generic information
-  res.status(httpCode).json({
+  // Add WWW-Authenticate header if the error is a 401
+  if (httpCode === 401) {
+    // If the authenticate method is valid add WWW-Authenticate header
+    try {
+      res.set('WWW-Authenticate', err.wwwAuthenticateMethod);
+    } catch (err) {
+      // Otherwise, switch the details to a 500 internal server error
+      httpCode = 500;
+      errName = `UnknownAuthErr`;
+      errMessage = `${errMessage} However, there was an additional error generating the WWW-authenticate header: ${err.message}`;
+      publicErrName = 'InternalServerErr';
+      publicErrMessage = 'An internal server error occurred when authorizing.';
+    }
+  }
+
+  // Log the error to the console
+  console.error(errMessage);
+  console.error(err.stack);
+
+  // Send HTTP response using public information
+  return res.status(httpCode).json({
     error: {
       name: publicErrName,
       message: publicErrMessage,
@@ -34,6 +69,13 @@ class BaseErr extends Error {
   };
 };
 
+class ErrWrapper extends BaseErr {
+  constructor(message, originalErr) {
+    super(`${message}: ${originalErr.message}`);
+    this.originalErr = originalErr;
+  }
+}
+
 // Errors having to do with bad requests
 // Invalid or malformed data within the requests (includes invalid entries for user-filled fields like description, alt_text, etc)
 
@@ -50,21 +92,35 @@ class GeneralBadRequestErr extends BaseErr {
   };
 };
 
+class MissingFieldErr extends GeneralBadRequestErr {
+  constructor(missingFieldName) {
+    const errMsg = `${missingFieldName} was missing from the request.`;
+    super(errMsg);
+    this.name = 'MissingRequestField';
+
+    this.publicErrMessage = errMsg;
+    this.publicErrName = 'MissingRequestField';
+  }
+};
+
 // Disallowed filetype
-class InvalidFiletypeErr extends GeneralBadRequest {
-  constructor(message, invalidFiletype) {
+class InvalidFiletypeErr extends GeneralBadRequestErr {
+  constructor(message) {
     super(message);
     this.name = 'InvalidFiletype';
 
-    this.publicErrMessage = `Filetype ${invalidFiletype} is not allowed for upload.`;
+    this.publicErrMessage = message;
     this.publicErrName = 'InvalidFiletype';
   };
 };
 
-class InvalidInputErr extends GeneralBadRequest {
+class InvalidDataErr extends GeneralBadRequestErr {
   constructor(message) {
     super(message);
-    this.name = 'InvalidInput';
+    this.name = 'InvalidData';
+
+    this.publicErrMessage = message;
+    this.publicErrName = 'InvalidData';
   }
 };
 
@@ -87,13 +143,20 @@ class GeneralDatabaseErr extends BaseErr {
 
 // Conflict with an existing row for a column in the dabatase with a unique constraint (no duplicates)
 class ConflictErr extends GeneralDatabaseErr {
-  constructor(message, duplicateData) {
+  constructor(message) {
       super(message);
       this.name = 'ConflictErr';
 
       this.publicErrName = this.name;
-      this.publicErrMessage = `${duplicateData} already exists. Please remove the existing ${duplicateData} before adding a new one.`;
+      this.publicErrMessage = message;
       this.httpCode = 409;
+  }
+};
+
+class InvalidQueryErr extends GeneralDatabaseErr {
+  constructor(message) {
+    super(message);
+    this.name = 'InvalidQueryErr';
   }
 };
 
@@ -121,15 +184,44 @@ class TransactionErr extends GeneralDatabaseErr {
   }
 };
 
+class GeneralAuthenticationErr extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'AuthenticationErr';
+
+    this.publicErrMessage = errMsg;
+    this.publicErrName = 'AuthenticationErr';
+    this.httpCode = 401;
+  }
+};
+
+class InvalidAPIKey extends GeneralAuthenticationErr {
+  constructor() {
+    const errMsg = `Unauthorized. Invalid API Key`;
+    super(errMsg);
+    this.name = 'InvalidAPIKey';
+
+    this.publicErrMessage = errMsg;
+    this.publicErrName = 'InvalidAPIKey';
+  }
+};
+
+
 
 module.exports = {
+  getErrToThrow,
   handleError,
+  BaseErr,
+  ErrWrapper,
   GeneralBadRequestErr,
   InvalidFiletypeErr,
-  InvalidInputErr,
+  InvalidDataErr,
   GeneralDatabaseErr,
+  MissingFieldErr,
   ConflictErr,
+  InvalidQueryErr,
   ClientReleaseErr,
   DBConnectionErr,
   TransactionErr,
+  InvalidAPIKey,
 };

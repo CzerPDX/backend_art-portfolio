@@ -14,11 +14,12 @@
 const { Pool } = require('pg')
 const { createTunnel } = require(`tunnel-ssh`);
 
-const { 
+const {
   ConflictErr, 
   ClientReleaseErr, 
   DBConnectionErr, 
-  TransactionErr 
+  TransactionErr, 
+  InvalidQueryErr
 } = require('./customErrors');
 
 
@@ -55,9 +56,7 @@ class DBHandler {
         console.error('Error: Tried to open pool, but pool was already open.');
       }
     } catch (err) {
-      const errMsg = 'Unable to set up database pool';
-      console.error(`${errMsg}: ${err.message}`);
-      throw new DBConnectionErr(errMsg);
+      throw new DBConnectionErr(`Unable to set up database pool: ${err.message}`);
     }
   };
 
@@ -68,9 +67,7 @@ class DBHandler {
         this.pool.end();
         console.log('Pool closed')
       } catch (err) {
-        const errMsg = 'Unable to close pool';
-        console.error(`${errMsg}: ${err.message}`);
-        throw new DBConnectionErr(errMsg);
+        throw new DBConnectionErr(`Unable to close pool: ${err.message}`);
       }
     }
   };
@@ -81,62 +78,57 @@ class DBHandler {
   executeQueries = async (dbQueries) => {
     let client;
 
-    // Verify that dbQueries: exists, is an array, and that the array consists of DBQuery objects
-    if ((!dbQueries) || (!Array.isArray(dbQueries)) || (!dbQueries.every(query => query instanceof DBQuery))) {
-      console.error('Error: executeQueries requires an array of DBQuery objects as input.');
-      throw new Error('Invalid query format');
-    }    
+    if (!dbQueries) {
+      throw new InvalidQueryErr('No queries provided to executeQueries');
+    }
+
+    if ((!Array.isArray(dbQueries)) || (!dbQueries.every(query => query instanceof DBQuery))) {
+      throw new InvalidQueryErr(`executeQueries parameter must be an non-empty array of DBQuery objects.`)
+    }
 
     // Get a new client so it can use the db pool
     try {
       client = await this.pool.connect();
     } catch (err) {
-      const errMsg = 'Unable to get new client from pool';
-      console.error(`${errMsg}: ${err.message}`);
-      throw new DBConnectionErr(errMsg);
+      throw new DBConnectionErr(`Unable to get new client from pool: ${err.message}`);
     }
     
     try {
       // Send the query and set the response rows in the DBQuery objects
       // Start a transaction
       await client.query('BEGIN');
-      console.log('executing queries');
+      // console.log('executing queries');
 
       // Go through the list of queries and execute each one
       for(let dbQuery of dbQueries) {
         // Log the query and send it to the database
-        console.log(dbQuery.queryText);
+        // console.log(dbQuery.queryText);
         const dbRes = await client.query(dbQuery.queryText, dbQuery.params);
 
         // Save the resulting rows as dbRes.rows
         dbQuery.rows = dbRes.rows;
       }
       // Commit the transaction if arrived here without err
-      await client.query('COMMIT');
+      // await client.query('COMMIT');
 
     } catch (err) {
 
       // If an err has occurred, roll back the transaction to undo all changes
-      console.error(err.detail);
-      console.log('Rolling back commit...');
+      // console.log('Rolling back commit...');
       try {
         await client.query('ROLLBACK');
-        console.log('Commit rollback');
+        // console.log('Commit rollback');
       } catch (err) {
-        const errMsg = 'Failed to rollback transaction';
-        console.error(`${errMsg}: ${err.message}`);
-        throw new TransactionErr(errMsg);
+        throw new TransactionErr(`Failed to rollback transaction: ${err.message}`);
       }
 
       // Check if the error is a unique key constraint
       if (err.code === duplicateDBErrCode) {
-        throw new ConflictErr(`Constraint error: ${err.constraint}`);
+        throw new ConflictErr(err.detail);
       }
 
       // Otherwise throw a generic transaction error
-      const errMsg = 'Database error';
-      console.error(`${errMsg}: ${err.message}`);
-      throw new TransactionErr(errMsg);
+      throw new TransactionErr(`Database error: ${err.message}`);
 
     } finally {
       if (client) {
@@ -144,9 +136,7 @@ class DBHandler {
           // Release the clien tback into the pool
           await client.release();
         } catch (err) {
-          const errMsg = 'Failed to release client';
-          console.error(`${errMsg}: ${err.message}`);
-          throw new ClientReleaseErr(errMsg);
+          throw new ClientReleaseErr(`Failed to release client: ${err.message}`);
         }
       }
     }    
@@ -205,7 +195,6 @@ class DBHandler {
   
       } catch (err) {
         // Reject the promise if there's an err
-        console.error(`Error setting up local pool:  ${err.message}`);
         reject(err); 
       }
     });

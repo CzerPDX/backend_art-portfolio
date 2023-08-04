@@ -1,6 +1,6 @@
 const multer = require('multer');
 
-const { BadRequestErr, ConflictErr } = require('./customErrors');
+const { getErrToThrow, ErrWrapper, MissingFieldErr } = require('./customErrors');
 const { AllowedFiletypes, sanitizeFilename, sanitizeInputForHTML } = require('./security');
 const DBQuery = require('../utilities/dbHandler').DBQuery;
 
@@ -23,68 +23,51 @@ class ContentManagement {
     try {
       // Validate the image is valid for upload and the request has all required information
       await this.#validateImageForUpload(req, res);
-    } catch (err) {
-      throw err;
-    }
 
-    // Send the image data to the database
-    let successMsg;
-    try {
-      successMsg = await this.#sendImageDataToDB(req);
-    } catch (err) {
-      // Specific handling for unique key constraint issues
-      if (err.code === 'DB_PKEY_FAILURE') {
-        throw new ConflictErr(`Image already exists in the database. Remove existing database entry for this image or use a different filename. ${err.message}`)
-      }
-      // General failure sending to database
-      else {
-        throw err;
-      }
-    }
-
-    // Try to send the file to the image bucket
-    try {
+      // Send the image data to the database
+      const successMsg = await this.#sendImageDataToDB(req);
       await this.#uploadImageToBucket(req);
+
+      return successMsg;
+
     } catch (err) {
       // If uploading to the bucket failed, try to remove the entry from the database 
       try {
         await this.#removeImageFromDB(req.file.originalname);
       } catch (err) {
-        throw new Error(`Failed to upload to file bucket. Additional error trying to remove from database during cleanup: ${err.message}`);
+        throw new ErrWrapper(`Failed to upload to file bucket. Additional error trying to remove from database during cleanup: ${err.message}`, err);
       }
-      throw new Error(`Error uploading to image bucket: ${err.message}`);
+      throw getErrToThrow(err, `Failed to upload to file bucket`);
     }
-    
-    return successMsg;
   };
 
   // Remove a file from the filebucket and remove its details from the database
   deleteFile = async (req) => {
 
-    // Verify that req.params exists
+    // Verify that req.params and req.params.filename exists
     if (!req.params) {
-      throw new BadRequestErr('No parameters were included in the request.');
+      throw new MissingFieldErr('params');
+    }
+    if (!req.params.filename) {
+      throw new MissingFieldErr('params.filename');
     }
     
-    // Pull the filename out into its own variable
-    const filename = req.params.filename;
-  
-    // Remove image entries from DB
     try {
-      await this.#removeImageFromDB(filename);
-    } catch (err) {
-      throw err;
-    }
-    
-    // Then remove the image entry from the file bucket
-    try {
-      await this.#removeImageFromBucket(filename);
-    } catch (err) {
-      throw err;
-    }
+      // Pull the filename out into its own variable
+      const filename = req.params.filename;
 
-    // Log success
-    return `${filename} removed successfully.`;
+      // Remove image entries from DB
+      await this.#removeImageFromDB(filename);
+    
+      // Then remove the image entry from the file bucket
+      await this.#removeImageFromBucket(filename);
+
+      // Log success
+      return `${filename} removed successfully.`;
+
+    } catch (err) {
+      throw getErrToThrow(err, `Failed to remove image`);
+    }
   };
 
   // Get all images in the db
@@ -100,7 +83,7 @@ class ContentManagement {
       return allImagesQuery.rows;
 
     } catch (err) {
-      throw err;
+      throw getErrToThrow(err, `Failed to get all images`);
     }
   };
 
@@ -125,7 +108,7 @@ class ContentManagement {
       return imagesByTagNameQuery.rows;
 
     } catch (err) {
-      throw err;
+      throw getErrToThrow(err, `Failed to get images by tag name`);
     }
   };
 
@@ -142,14 +125,10 @@ class ContentManagement {
       await this.dbHandler.executeQueries([allFilenamesQuery]);
 
       // Pull tag names out of object and into an array to be sent to client
-      const retArr = [];
-      for (let filenameRow of  allFilenamesQuery.rows) {
-        retArr.push(filenameRow.filename);
-      }
-      return retArr;
+      return allFilenamesQuery.rows.map(row => row.filename);
 
     } catch (err) {
-      throw err;
+      throw getErrToThrow(err, `Failed to get all image filenames`);
     }
   };
 
@@ -181,7 +160,7 @@ class ContentManagement {
       await this.dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
 
     } catch (err) {
-      throw err;
+      throw getErrToThrow(err, `Failed to remove tag from the database`);
     }
   };
 
@@ -199,7 +178,7 @@ class ContentManagement {
       await this.dbHandler.executeQueries([addTagQuery]);
 
     } catch (err) {
-      throw err;
+      throw getErrToThrow(err, `Failed to add new tag to the database`);
     }
   };
 
@@ -216,16 +195,12 @@ class ContentManagement {
 
       // Execute query
       await this.dbHandler.executeQueries([allTagNamesQuery]);
-
+  
       // Parse the return data in allTagNamesQuery.rows for return to the client
-      const retArr = [];
-      for (let tagName of  allTagNamesQuery.rows) {
-        retArr.push(tagName.tag_name);
-      }
-      return retArr;
+      return allTagNamesQuery.rows.map(row => row.tag_name);
 
     } catch (err) {
-      throw err;
+      throw getErrToThrow(err, `Failed to get all tag names`);
     }
   };
 
@@ -249,10 +224,29 @@ class ContentManagement {
       await this.dbHandler.executeQueries([removeAssocQuery]);
 
     } catch (err) {
-      throw err;
+      throw getErrToThrow(err, `Failed to remove image-tag association from database for ${filename}: ${tagName}`);
     }
   };
 
+  // Get all assocs as an array of objects that includes filename and tagName
+  getAllImageTagAssocs = async () => {
+    try {
+      // Set up query
+      const getAllAssocsQueryText = `
+      SELECT assoc.filename, tags.tag_name
+      FROM portfolio_image_tags_assoc assoc,
+      portfolio_tags tags
+      WHERE assoc.tag_id = tags.tag_id`;
+      const getAllAssocsQuery = new DBQuery(getAllAssocsQueryText);
+
+      // Execute query
+      await this.dbHandler.executeQueries([getAllAssocsQuery]);
+      return getAllAssocsQuery.rows;
+
+    } catch (err) {
+      throw getErrToThrow(err, `Failed to get image-tag associations`);
+    }
+  };
 
   // Private Methods
 
@@ -275,7 +269,6 @@ class ContentManagement {
     });
   };
 
-
   // Validate file and request details and file are valid/present before uploading
   #validateImageForUpload = async (req, res) => {
     // Users Multer to upload the file
@@ -283,17 +276,19 @@ class ContentManagement {
 
     // Verify that a file was provided
     if (!req.file) {
-      throw new BadRequestErr('No file was included in the request to the backend.');
+      throw new MissingFieldErr('file');
     }
-
     // Validate that a body was included
     if (!req.body) {
-      throw new BadRequestErr('No body was included in the upload request');
+      throw new MissingFieldErr('body');
     }
-
-    // Validate that a description and alt_text was included
-    if (!req.body.description || !req.body.alt_text) {
-      throw new BadRequestErr('Description and alt text must be included in the request.');
+    // Validate that the descirption was included
+    if (!req.body.description) {
+      throw new MissingFieldErr('body.description');
+    }
+    // Validate that the alt_text was included
+    if (!req.body.alt_text) {
+      throw new MissingFieldErr('body.alt_text');
     }
 
     try {
@@ -307,9 +302,8 @@ class ContentManagement {
       // Validate filetype and that the filename matches the filetype
       this.filetypeValidator.validateFiletypeAndExtension(req.file); 
     } catch (err) {
-      throw err;
+      throw getErrToThrow(err, `Failed to sanitize image`);
     }
-    
   };
 
   // Send an image to the file bucket
@@ -325,7 +319,7 @@ class ContentManagement {
       return await this.easyStore.upload(params);
 
     } catch (err) {
-      throw new Error(`Error when uploading image to file bucket: ${err.message}`);
+      throw getErrToThrow(err, `Failed to upload file to bucket`);
     }
   };
 
@@ -340,27 +334,10 @@ class ContentManagement {
 
       return await this.easyStore.delete(params);
     } catch (err) {
-      throw new Error(`Error removing file from bucket: ${err.message}`)
+      throw getErrToThrow(err, `Failed to remove file from bucket`);
     }
   };
 
-  #getInvalidTags = async(tags) => {
-    // Get a list of all tag names in the database
-    const validTagNames = await this.getAllTagNames();
-    
-    const invalidTags = [];
-    try {
-      // If any of them don't exist in the database throw an error
-      for (let tagIdx in tags) {
-        if (!validTagNames.includes(tags[tagIdx])) {
-          invalidTags.push(tags[tagIdx]);
-        }
-      }
-      return invalidTags;
-    } catch (err) {
-      throw new BadRequestErr(`Could not validate tag names`);
-    }
-  }
 
 
   // Private Database Functions
@@ -371,19 +348,17 @@ class ContentManagement {
       const bucketUrl = `${process.env.FILE_BUCKET_ENDPOINT}/${process.env.BUCKET_NAME}/${req.file.originalname}`;
       const description = req.body.description;
       const altText = req.body.alt_text;
+      let incomingTagNames = [];
 
-      // Set up tags to either be an empty array or to contain the tags given in the request body
-      let tags;
+      // If tags were provided in the body, set them as incomingTagNames
       if (req.body.tags) {
-        tags = JSON.parse(req.body.tags);
-      } else {
-        tags = [];
+        incomingTagNames = JSON.parse(req.body.tags);
       }
 
       // Set up queries array
       const queries = [];
 
-      // Add a new row to the portfolio_images db with the parameter information
+      // Add a new row to the portfolio_images db with information for filename, bucket_url, description, and alt_text
       const addImageQueryText = `
       INSERT INTO portfolio_images (filename, bucket_url, description, alt_text)
       VALUES ($1, $2, $3, $4)`;
@@ -392,57 +367,35 @@ class ContentManagement {
       // Add the query to the queries list
       queries.push(addImageQuery);
 
-      // Add a query to the queries list for each of the valid filename-tag associations for this image
-      const invalidTags = await this.#getInvalidTags(tags)
-      for (let tagIdx in tags) {
-        // If the tag is not invalid
-        if (!invalidTags.includes(tags[tagIdx])) {
-          const tagName = tags[tagIdx];
-          console.log(`Adding image tag assoc: ${filename}, ${tagName}`);
-          queries.push(this.#addImageTagAssocQuery(filename, tagName));
+      // Add valid tag names to the query list but add invalid tag names to a partial error message
+      const allValidTagNames = await this.getAllTagNames();
+      const invalidTagNames = [];
+
+      // Split incoming tag names into valid (exists in databse) and invalid (does not exist in database) groups
+      for (const currentTagName of incomingTagNames) {
+        if (allValidTagNames.includes(currentTagName)) {
+          // Add valid tags to queries list
+          queries.push(this.#addImageTagAssocQuery(filename, currentTagName))
+        } else {
+          // Add invalid tagnames to the invalid tagnames list
+          invalidTagNames.push(currentTagName);
         }
       }
 
       // Execute the queries on the queries list
       await this.dbHandler.executeQueries(queries);
 
-      // Compose success string but include any invalid tags that were not associated with the image
-      let retString = `Successfully uploaded ${bucketUrl}.`;
-      let partialErrMsg;
-      if (invalidTags.length > 0) {
-        partialErrMsg = ' However, the following tags did not exist in the database and were not added:';
-        for (let invalidTagIdx in invalidTags) {
-          partialErrMsg = partialErrMsg.concat(` ${invalidTags[invalidTagIdx]}`);
-        }
-        retString = retString.concat(partialErrMsg);
+      // Compose partial error success string if necessary. Include any invalid tags that were not associated with the image if they exist
+      let partialErrMsg = '';
+      if (invalidTagNames.length > 0) {
+          partialErrMsg = ` However, the following tags did not exist in the database and were not added: ${Array.from(invalidTagNames).join(' ')}`;
       }
 
-      return retString;
+      // Send success message
+      return `Successfully uploaded ${bucketUrl}.${partialErrMsg}`;
 
     } catch (err) {
-      throw err;
-    }
-  };
-
-  
-
-  // Get all assocs as an array of objects that includes filename and tagName
-  #getAllImageTagAssocs = async () => {
-    try {
-      // Set up query
-      const getAllAssocsQueryText = `
-      SELECT assoc.filename, tags.tag_name
-      FROM portfolio_image_tags_assoc assoc,
-      portfolio_tags tags
-      WHERE assoc.tag_id = tags.tag_id`;
-      const getAllAssocsQuery = new DBQuery(getAllAssocsQueryText);
-
-      // Execute query
-      await this.dbHandler.executeQueries([getAllAssocsQuery]);
-      return getAllAssocsQuery.rows;
-
-    } catch (err) {
-      throw err;
+      throw getErrToThrow(err, `Failed to send image data to the database`);
     }
   };
 
@@ -473,8 +426,6 @@ class ContentManagement {
       throw(err);
     }
   };
-
-  
 
   // Reused Queries
   // These methods return DBQuery objects so they can be used repeatedly throughout DBHandler as they are called
