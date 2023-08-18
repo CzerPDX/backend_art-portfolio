@@ -1,6 +1,6 @@
 const rateLimit = require('express-rate-limit');
 
-const { InvalidAPIKey, InvalidFiletypeErr } = require('./customErrors');
+const { InvalidAPIKey, InvalidDataErr, InvalidFiletypeErr } = require('./customErrors');
 
 
 // Compare API keys with constant time to mitigate timing attacks
@@ -115,13 +115,13 @@ const sanitizeFilename = (filename) => {
   // Exactly one file extension that only allows upper and lowercase letters
   // Exactly one period separating the basename and file extension
   const allowedCharsRegex = /^[a-zA-Z0-9\-_]+\.[a-zA-Z]+$/; // A regular expression that describes the allowed characters and format
-
+  
   // Verify that the input only contains valid characters
   if (!allowedCharsRegex.test(filename)) {
     let errMsg;
 
-    // Currently the software does not allow spaces in the filenames. 
-    // However, a future iteration should add functionality to replace the spaces with %20 for url encoding
+    // Currently the software does not allow spaces in the filenames so give a custom error message if the error is due to a space in the filename
+    // A future iteration should add functionality to replace the spaces with %20 for url encoding
     if (filename.includes(" ")) {
       errMsg = 'Filenames may not contain spaces.';
     } else {
@@ -130,11 +130,38 @@ const sanitizeFilename = (filename) => {
     throw new InvalidDataErr(errMsg);
   }
 
-  // Strip whitespace
-  const sanitizedFilename = filename.trim();
+  // Possible legacy code from previous refactor. Does not seem to serve a purpose as the above regex verifies there are no white spaces already
+  // may have left it in by mistake so commenting it out before deleting it
+  // // Strip whitespace
+  // const sanitizedFilename = filename.trim();
 
   return sanitizedFilename;
 }; 
+
+// Returns true if no errors are thrown when validating
+// Tag names must be all lowercase and only include alphanumeric symbols and dashes
+const validateTagName = (tagName) => {
+  // Verify that tagName is not undefined
+  if (!tagName) {
+    throw new InvalidDataErr('No tag name provided.');
+  }
+
+  // Verify that input is a string
+  if (typeof tagName !== "string") {
+    throw new InvalidDataErr('Please only provide a string for tag names.');
+  }
+
+  const allowedCharsRegex = /^[a-z0-9\-]+$/;    // A regex that defines the allowed characters as lowercase alphanumeric with dashes
+
+  // Check the tag name against the regex pattern and throw an error if it doesn't match
+  if (!allowedCharsRegex.test(tagName)) {
+    throw new InvalidDataErr('Invalid characters in tag name. Tag names may only include lowercase alphanumeric characters and dashes.');
+  }
+
+  // If this return statement is reached then the tag name is valid
+  return true;
+};
+
 
 
 // FiletypeInfo class
@@ -279,4 +306,5 @@ module.exports = {
   sanitizeInputForHTML,
   sanitizeFilename,
   validateAPI,
+  validateTagName,
 };
