@@ -1,8 +1,13 @@
 const multer = require('multer');
 
 const { getErrToThrow, ErrWrapper, MissingFieldErr } = require('./customErrors');
-const { AllowedFiletypes, sanitizeFilename, sanitizeInputForHTML } = require('./security');
 const DBQuery = require('../utilities/dbHandler').DBQuery;
+const { 
+  AllowedFiletypes, 
+  sanitizeFilename, 
+  sanitizeInputForHTML,
+  validateTagName 
+} = require('./security');
 
 require(`dotenv`).config();
 
@@ -35,7 +40,7 @@ class ContentManagement {
       try {
         await this.#removeImageFromDB(req.file.originalname);
       } catch (err) {
-        throw new ErrWrapper(`Failed to upload to file bucket. Additional error trying to remove from database during cleanup: ${err.message}`, err);
+        throw new ErrWrapper(err, `Failed to upload to file bucket. Additional error trying to remove from database during cleanup: ${err.message}`);
       }
       throw getErrToThrow(err, `Failed to upload to file bucket`);
     }
@@ -295,6 +300,11 @@ class ContentManagement {
     }
 
     try {
+      // If the body includes tags, validate their format
+      if (req.body.tags) {
+        this.#validateTagNames(req.body.tags);
+      }
+
       // Sanitize the image metadata for HTML formatting
       req.body.description = sanitizeInputForHTML(req.body.description);
       req.body.alt_text = sanitizeInputForHTML(req.body.alt_text);
@@ -306,6 +316,19 @@ class ContentManagement {
       this.filetypeValidator.validateFiletypeAndExtension(req.file); 
     } catch (err) {
       throw getErrToThrow(err, `Failed to sanitize image`);
+    }
+  };
+
+  #validateTagNames(tagNameArrAsStr) {
+    try {
+      // Parse the tag names from a string into an array
+      const tagNameArr = JSON.parse(tagNameArrAsStr);
+  
+      // For each tag name in the array, validate its format
+      tagNameArr.forEach((tagName) => validateTagName(tagName));
+  
+    } catch (err) {
+      throw getErrToThrow(err, 'Failed to validate tag names');
     }
   };
 
@@ -449,7 +472,6 @@ class ContentManagement {
     }
   }
 }
-
 
 
 module.exports = { ContentManagement };

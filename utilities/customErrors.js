@@ -9,9 +9,9 @@ const getErrToThrow = (err, contextMessage) => {
   } else {
     // If the wrapper has a custom message
     if (!contextMessage) {
-      retErr = new ErrWrapper(err.message, err);
+      retErr = new ErrWrapper(err, err.message);
     } else {
-      retErr = new ErrWrapper(contextMessage, err);
+      retErr = new ErrWrapper(err, contextMessage);
     }
   }
   return retErr;
@@ -70,8 +70,8 @@ class BaseErr extends Error {
 };
 
 class ErrWrapper extends BaseErr {
-  constructor(message, originalErr) {
-    super(`${message}: ${originalErr.message}`);
+  constructor(originalErr, contextMessage) {
+    super(`${contextMessage}: ${originalErr.message}`);
     this.originalErr = originalErr;
   }
 }

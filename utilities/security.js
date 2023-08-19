@@ -3,6 +3,13 @@ const rateLimit = require('express-rate-limit');
 const { InvalidAPIKey, InvalidDataErr, InvalidFiletypeErr } = require('./customErrors');
 
 
+
+class ValidateAndSanitize {
+  // A class placeholder for a future refactor
+}
+
+
+
 // Compare API keys with constant time to mitigate timing attacks
 const constantTimeComparison = (comp1, comp2) => {
   try {
@@ -18,7 +25,7 @@ const constantTimeComparison = (comp1, comp2) => {
     }
     return comparisonResult;
   } catch (err) {
-    throw new ErrWrapper(err.message, err);
+    throw new ErrWrapper(err, err.message);
   }
 };
 
@@ -40,7 +47,36 @@ const validateAPI = (req, res, next) => {
   } catch (err) {
     throw err;
   }
+
+  return true;
 };
+
+// Returns true if no errors are thrown when validating
+// Tag names must be all lowercase and only include alphanumeric symbols and dashes
+// Sanitization is not required for valid tag names due to the above restrictions
+const validateTagName = (tagName) => {
+
+  // Verify that input is a string
+  if (typeof tagName !== "string") {
+    throw new ErrWrapper(err, 'Please only provide a string for tag names.');
+  }
+
+  // Verify that tagName is not undefined
+  if (!tagName) {
+    throw new InvalidDataErr('No tag name provided.');
+  }
+
+  const allowedCharsRegex = /^[a-z0-9\-]+$/;    // A regex that defines the allowed characters as lowercase alphanumeric with dashes
+
+  // Check the tag name against the regex pattern and throw an error if it doesn't match
+  if (!allowedCharsRegex.test(tagName)) {
+    throw new InvalidDataErr('Invalid characters in tag name. Tag names may only include lowercase alphanumeric characters and dashes.');
+  }
+
+  // If this return statement is reached then the tag name is valid
+  return true;
+};
+
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -130,37 +166,8 @@ const sanitizeFilename = (filename) => {
     throw new InvalidDataErr(errMsg);
   }
 
-  // Possible legacy code from previous refactor. Does not seem to serve a purpose as the above regex verifies there are no white spaces already
-  // may have left it in by mistake so commenting it out before deleting it
-  // // Strip whitespace
-  // const sanitizedFilename = filename.trim();
-
-  return sanitizedFilename;
+  return filename;
 }; 
-
-// Returns true if no errors are thrown when validating
-// Tag names must be all lowercase and only include alphanumeric symbols and dashes
-const validateTagName = (tagName) => {
-  // Verify that tagName is not undefined
-  if (!tagName) {
-    throw new InvalidDataErr('No tag name provided.');
-  }
-
-  // Verify that input is a string
-  if (typeof tagName !== "string") {
-    throw new InvalidDataErr('Please only provide a string for tag names.');
-  }
-
-  const allowedCharsRegex = /^[a-z0-9\-]+$/;    // A regex that defines the allowed characters as lowercase alphanumeric with dashes
-
-  // Check the tag name against the regex pattern and throw an error if it doesn't match
-  if (!allowedCharsRegex.test(tagName)) {
-    throw new InvalidDataErr('Invalid characters in tag name. Tag names may only include lowercase alphanumeric characters and dashes.');
-  }
-
-  // If this return statement is reached then the tag name is valid
-  return true;
-};
 
 
 
@@ -228,7 +235,6 @@ class AllowedFiletypes {
 
   // Returns the keyname in this.allowedFiletypes that matches the magic number contained in the buffer
   // If the magic number doesn't match any in this.allowedFiletypes, throw an error.
-  // If the
   #getFiletypeKeyname = (buffer) => {
 
     // Get the magic number of the incoming buffer file as a string
@@ -236,7 +242,7 @@ class AllowedFiletypes {
     try {
       incomingMagicNumber = buffer.toString('hex', 0, 4);
     } catch (err) {
-      throw ErrWrapper(`Error getting magic number: ${err.message}`, err);
+      throw ErrWrapper(err, `Error getting magic number: ${err.message}`);
     }
 
     // Find the keyname that matches that magicnumber
@@ -255,14 +261,13 @@ class AllowedFiletypes {
     }
 
     return retKey;
-
   };
 
   // Returns true if the file in the buffer is an allowed filetype or false if not
   #validateFilenameExt = (filetypeKeyname, filename) => {
     // Verify that filetypeKeyname and filename exist
     if (!filetypeKeyname) {
-      throw new ErrWrapper('No filetype keyname was provided.', err)
+      throw new ErrWrapper(err, 'No filetype keyname was provided.')
     }
     if (!filename) {
       throw new MissingFieldErr('filename')
@@ -279,7 +284,7 @@ class AllowedFiletypes {
       // Split the filename by the period
       splitFilenameArr = filename.split('.');
     } catch (err) {
-      throw new ErrWrapper(`Error splitting filename: ${err.message}`, err);
+      throw new ErrWrapper(err, `Error splitting filename: ${err.message}`);
     }
 
     // If there aren't exactly 2 entries in splitFilenameArr, throw an error because the filename is malformed.
@@ -294,7 +299,6 @@ class AllowedFiletypes {
     if (!this.allowedFiletypes[filetypeKeyname].extensions.includes(fileExtension)) {
       throw new InvalidDataErr(`Invalid file extension ${fileExtension} for filetype ${filetypeKeyname}`);
     }
-
   };
 }
 
