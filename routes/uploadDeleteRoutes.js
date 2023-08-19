@@ -8,7 +8,7 @@ const router = express.Router();
 require(`dotenv`).config();
 const { ContentManagement } = require('../utilities/contentManagement'); 
 const contentManagement = new ContentManagement();
-const { getHttpCodeFromError } = require('../utilities/customErrors');
+const { handleError } = require('../utilities/customErrors');
 
 
 // Remove a file from the content directory
@@ -21,12 +21,7 @@ router.delete('/:filename', async (req, res) => {
     return res.send({ message: successMsg });
 
   } catch (err) {
-    // Setup error message and log it
-    const errMsg = `Error of type ${err.name} when deleting file: ${err.message}`;
-    console.error(errMsg);
-
-    // Send http response
-    return res.status(getHttpCodeFromError(err)).send({ message: errMsg });
+    handleError(err, res);
   }
 });
 
@@ -36,12 +31,7 @@ router.put('/', async (req, res) => {
     const successMsg = await contentManagement.putFile(req, res);
     res.status(200).send({ message: successMsg });
   } catch (err) {
-    // Setup error message and log it
-    const errMsg = `Error of type ${err.name} when uploading file to bucket: ${err.message}`;
-    console.error(errMsg);
-
-    // Send http response
-    return res.status(getHttpCodeFromError(err)).send({ message: errMsg });
+    handleError(err, res);
   }
   
 });

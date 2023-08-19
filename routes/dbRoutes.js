@@ -16,8 +16,7 @@ router.get(`/all-art`, async (req, res) => {
   try {
     res.send(await contentManagement.getAllImages());
   } catch (err) {
-    console.error(`Failed to connect to database`, err);
-    res.status(500).send(`Failed to connect to database`);
+    handleError(err, res);
   }
 });
 
@@ -26,8 +25,7 @@ router.get(`/all-tags`, async (req, res) => {
   try {
     res.send(await contentManagement.getAllTagNames());
   } catch (err) {
-    console.error(`Failed to connect to database`, err);
-    res.status(500).send(`Failed to connect to database`);
+    handleError(err, res);
   }
 });
 
@@ -38,8 +36,7 @@ router.get(`/art/:tagName`, async (req, res) => {
   try {
     res.send(await contentManagement.getAllImagesByTag(req.params.tagName));
   } catch (err) {
-    console.error(`Failed to connect to database`, err);
-    res.status(500).send(`Failed to connect to database`);
+    handleError(err, res);
   }
 });
 
@@ -49,8 +46,7 @@ router.get(`/all-filenames`, async (req, res) => {
   try {
     res.send(await contentManagement.getAllFilenames());
   } catch (err) {
-    console.error(`Failed to connect to database`, err);
-    res.status(500).send(`Failed to connect to database`);
+    handleError(err, res);
   }
 });
 
@@ -58,8 +54,7 @@ router.get(`/all-assocs`, async (req, res) => {
   try {
     res.send(await contentManagement.getAllAssocs());
   } catch (err) {
-    console.error(`Failed to connect to database`, err);
-    res.status(500).send(`Failed to connect to database`);
+    handleError(err, res);
   }
 });
 

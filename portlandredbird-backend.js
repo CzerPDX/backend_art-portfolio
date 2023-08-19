@@ -4,6 +4,8 @@ const { validateAPI, apiLimiter } = require('./utilities/security');
 const dbHandler = require('./utilities/dbHandler').dbHandlerInstance;  // Database handler singleton
 const app = express();   
 
+
+
 // Used to gracefully shut down the server
 const cleanupAndExit = async () => {
   try {
@@ -21,24 +23,20 @@ const cleanupAndExit = async () => {
 // In live environment the NODE_ENV will be set to "production"
 const port = process.env.NODE_ENV === 'production' ? null : process.env.PORTFOLIO_API_PORT;
 
+
+// Middleware
 // Log all requests
 app.all('*', (req, res, next) => {
   console.log(`${new Date().toString()}: Received ${req.method} request on ${req.path}`);
   next();
 });
-
-// Middleware
-//  Validate request's api key before proceeding
-try {
-
-} catch (err) {
-  
-}
+// Validate request's API key before proceeding
 app.use(validateAPI);
 // Use rate IP-based rate limiting
 app.use(apiLimiter);
 
-// Routes
+
+// Route Handling
 // Upload & Delete Routes
 const uploadDeleteRoutes = require('./routes/uploadDeleteRoutes');
 app.use('/upload', uploadDeleteRoutes);
@@ -51,6 +49,7 @@ app.use('/db', dbRoutes);
 // User Routes
 const userRoutes = require('./routes/userRoutes');
 app.use('/user', userRoutes);
+
 
 // Start the server
 app.listen(port, async () => {
