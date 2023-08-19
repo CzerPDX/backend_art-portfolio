@@ -1,6 +1,6 @@
 const multer = require('multer');
 
-const { getErrToThrow, ErrWrapper, MissingFieldErr } = require('./customErrors');
+const { getErrToThrow, ErrWrapper, InvalidDataErr, MissingFieldErr, GeneralBadRequestErr } = require('./customErrors');
 const DBQuery = require('../utilities/dbHandler').DBQuery;
 const { 
   AllowedFiletypes, 
@@ -300,11 +300,6 @@ class ContentManagement {
     }
 
     try {
-      // If the body includes tags, validate their format
-      if (req.body.tags) {
-        this.#validateTagNames(req.body.tags);
-      }
-
       // Sanitize the image metadata for HTML formatting
       req.body.description = sanitizeInputForHTML(req.body.description);
       req.body.alt_text = sanitizeInputForHTML(req.body.alt_text);
@@ -326,7 +321,8 @@ class ContentManagement {
   
       // For each tag name in the array, validate its format
       tagNameArr.forEach((tagName) => validateTagName(tagName));
-  
+
+      return tagNameArr;
     } catch (err) {
       throw getErrToThrow(err, 'Failed to validate tag names');
     }
@@ -364,25 +360,19 @@ class ContentManagement {
     }
   };
 
-
-
   // Private Database Functions
   #sendImageDataToDB = async (req) => {
+    let incomingTagNames;     // An array of incoming tag names for the upload
+    let partialErrMsg = '';   // A partial error message if upload succeeds but tagnames fail
+    const queries = [];       // Array of queries
+    const bucketUrl = `${process.env.FILE_BUCKET_ENDPOINT}/${process.env.BUCKET_NAME}/${req.file.originalname}`;    // Bucket URL where the file will be located
+    let filename;             // Filename of the file being uploaded
+
     try {
       // Pull metadata for the image out of the request into friendly variables
-      const filename = req.file.originalname;
-      const bucketUrl = `${process.env.FILE_BUCKET_ENDPOINT}/${process.env.BUCKET_NAME}/${req.file.originalname}`;
+      filename = req.file.originalname;
       const description = req.body.description;
       const altText = req.body.alt_text;
-      let incomingTagNames = [];
-
-      // If tags were provided in the body, set them as incomingTagNames
-      if (req.body.tags) {
-        incomingTagNames = JSON.parse(req.body.tags);
-      }
-
-      // Set up queries array
-      const queries = [];
 
       // Add a new row to the portfolio_images db with information for filename, bucket_url, description, and alt_text
       const addImageQueryText = `
@@ -393,29 +383,52 @@ class ContentManagement {
       // Add the query to the queries list
       queries.push(addImageQuery);
 
-      // Add valid tag names to the query list but add invalid tag names to a partial error message
-      const allValidTagNames = await this.getAllTagNames();
-      const invalidTagNames = [];
+    } catch (err) {
+      throw getErrToThrow(err, `Failed to set up query to database`);
+    }
 
-      // Split incoming tag names into valid (exists in databse) and invalid (does not exist in database) groups
-      for (const currentTagName of incomingTagNames) {
-        if (allValidTagNames.includes(currentTagName)) {
-          // Add valid tags to queries list
-          queries.push(this.#addImageTagAssocQuery(filename, currentTagName))
-        } else {
-          // Add invalid tagnames to the invalid tagnames list
-          invalidTagNames.push(currentTagName);
+    // Validate tag name format if they were provided
+    try {
+      if (req.body.tags) {
+        incomingTagNames = this.#validateTagNames(req.body.tags);
+      }
+    } catch (err) {
+      // If the error is invalid data, provide a more descriptive error message otherwise general error
+      if (err instanceof InvalidDataErr) {
+        partialErrMsg = `However, the tag names were not provided in the correct format: ${err.message}`;
+      } else {
+        partialErrMsg = ' However, The tag names were not added due to an internal server error.';
+      }
+    }
+
+    // Add tag queries if they exist
+    try {
+      // If valid tags were provided in the body, push them to queries
+      if (incomingTagNames) {
+        incomingTagNames = JSON.parse(req.body.tags);
+
+        // Add valid tag names to the query list but add invalid tag names to a partial error message
+        const allValidTagNames = await this.getAllTagNames();
+        const invalidTagNames = [];
+
+        // Split incoming tag names into valid (exists in databse) and invalid (does not exist in database) groups
+        for (const currentTagName of incomingTagNames) {
+          if (allValidTagNames.includes(currentTagName)) {
+            // Add valid tags to queries list
+            queries.push(this.#addImageTagAssocQuery(filename, currentTagName))
+          } else {
+            // Add invalid tagnames to the invalid tagnames list
+            invalidTagNames.push(currentTagName);
+          }
+        }
+        // Compose partial error success string if necessary. Include any invalid tags that were not associated with the image if they exist
+        if (invalidTagNames.length > 0) {
+          partialErrMsg = ` However, the following tags did not exist in the database and were not added: ${Array.from(invalidTagNames).join(' ')}`;
         }
       }
 
-      // Execute the queries on the queries list
+      // Execute all the queries on the queries list
       await this.dbHandler.executeQueries(queries);
-
-      // Compose partial error success string if necessary. Include any invalid tags that were not associated with the image if they exist
-      let partialErrMsg = '';
-      if (invalidTagNames.length > 0) {
-          partialErrMsg = ` However, the following tags did not exist in the database and were not added: ${Array.from(invalidTagNames).join(' ')}`;
-      }
 
       // Send success message
       return `Successfully uploaded ${bucketUrl}.${partialErrMsg}`;
