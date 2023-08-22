@@ -1,13 +1,13 @@
 const express = require(`express`);
 const router = express.Router();
 
-const dbHandler = require('../utilities/dbHandler');
-const { constantTimeComparison } = require('../utilities/security');
+const dbHandler = require('../utilities/dbHandler').dbHandlerInstance;
+
 
 router.use(express.json());
 
-router.login('/login', async (req, res) => {
-
+router.post('/login', async (req, res) => {
+  res.status(200).send({ message: 'Reached login' });
 });
 
 
