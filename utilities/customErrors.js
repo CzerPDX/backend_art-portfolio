@@ -184,13 +184,14 @@ class TransactionErr extends GeneralDatabaseErr {
   }
 };
 
-class GeneralAuthenticationErr extends Error {
+class GeneralAuthenticationErr extends BaseErr {
   constructor(message) {
+    const errName = 'AuthenticationErr';
     super(message);
-    this.name = 'AuthenticationErr';
+    this.name = errName;
 
-    this.publicErrMessage = errMsg;
-    this.publicErrName = 'AuthenticationErr';
+    this.publicErrMessage = message;
+    this.publicErrName = errName;
     this.httpCode = 401;
   }
 };
@@ -206,22 +207,49 @@ class InvalidAPIKey extends GeneralAuthenticationErr {
   }
 };
 
+class InvalidUsernameErr extends GeneralAuthenticationErr {
+  constructor() {
+    const errMsg = 'Invalid Username';
+    const errName = 'InvalidUsername';
+    super(errMsg);
+    this.name = errName;
+
+    this.publicErrMessage = errMsg;
+    this.publicErrName = errName;
+  }
+};
+
+// Error for invalid password
+class InvalidPasswordErr extends GeneralAuthenticationErr {
+  constructor() {
+    const errMsg = 'Invalid Password';
+    const errName = 'InvalidPassword';
+    super(errMsg);
+    this.name = errName;
+
+    this.publicErrMessage = errMsg;
+    this.publicErrName = errName;
+  }
+};
+
 
 
 module.exports = {
-  getErrToThrow,
-  handleError,
   BaseErr,
+  ClientReleaseErr,
+  ConflictErr,
+  DBConnectionErr,
   ErrWrapper,
   GeneralBadRequestErr,
+  GeneralDatabaseErr,
+  handleError,
+  getErrToThrow,
+  InvalidAPIKey,
   InvalidFiletypeErr,
   InvalidDataErr,
-  GeneralDatabaseErr,
-  MissingFieldErr,
-  ConflictErr,
+  InvalidPasswordErr,
+  InvalidUsernameErr,
   InvalidQueryErr,
-  ClientReleaseErr,
-  DBConnectionErr,
+  MissingFieldErr,
   TransactionErr,
-  InvalidAPIKey,
 };
