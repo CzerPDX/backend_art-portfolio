@@ -4,36 +4,35 @@
 */
 
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 
 const dbHandler = require('./dbHandler').dbHandlerInstance;
 const DBQuery = require('../utilities/dbHandler').DBQuery;
-const { validateEmail } = require('./security');
+const { createJWT, validateEmail } = require('./security');
 const { 
   ErrWrapper, 
-  getErrToThrow, 
+  getErrToThrow,
   InvalidPasswordErr, 
   InvalidUsernameErr, 
-  MissingFieldErr 
+  MissingFieldErr
 } = require('./customErrors');
 
 
 
-// Hash a plain text password using bcrypt.
-// Returns the hashed password or throws an error
-const hashAndSalt = async (plainTextPass) => {
-  const saltRounds = 10;
-  try {
-    return await bcrypt.hash(plainTextPass, saltRounds);
-  } catch (err) {
-    throw new ErrWrapper(err, `Failed to hash password: ${err.message}`);
-  }
-};
+// // Hash a plain text password using bcrypt.
+// // Returns the hashed password or throws an error
+// const hashAndSalt = async (plainTextPass) => {
+//   const saltRounds = 10;
+//   try {
+//     return await bcrypt.hash(plainTextPass, saltRounds);
+//   } catch (err) {
+//     throw new ErrWrapper(err, `Failed to hash password: ${err.message}`);
+//   }
+// };
 
 // Validates the incoming password vs the hashed password in the database
 // Returns a JWT if login credentials are valid
 // Otherwise, will throw a custom error
-const loginUser = async (req) => {
+const validateUser = async (req) => {
 
   try {
     // Validate the request contains the required data for a login and then pull out email and password
@@ -49,31 +48,12 @@ const loginUser = async (req) => {
       throw new InvalidPasswordErr();
     }
 
-    // Return the JWT
-    return await createJWT(incomingEmail);
+    // Return a JWT if user is valid
+    return createJWT(incomingEmail);
 
   } catch (err) {
     throw err;
   }
-};
-
-// Create a JWT for the user
-const createJWT = async (userEmail) => {
-  // Payload is empty in this iteration but will hold info like role in the future
-  const payload = {};
-
-  // Private key for signing JWT
-  const privateKey = process.env.JWT_PRIVATE_KEY;
-
-  // Options for the JWT through the jsonwebtoken library
-  const options = {
-    algorithm:  'RS256',
-    issuer:     'Redbird Art Portfolio Backend',
-    subject:    userEmail,
-    expiresIn:  '20m',
-  };
-
-  return jwt.sign(payload, privateKey, options);
 };
 
 // Validate incoming login request data
@@ -142,5 +122,5 @@ const getHashedPass = async (incomingEmail) => {
 
 
 module.exports = {
-  loginUser
+  validateUser,
 };

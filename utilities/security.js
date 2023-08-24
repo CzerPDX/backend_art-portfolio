@@ -1,14 +1,78 @@
 const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 
-const { InvalidAPIKey, InvalidDataErr, InvalidFiletypeErr } = require('./customErrors');
+const { 
+  handleError,
+  InvalidAPIKey,
+  InvalidAuthTokenErr,
+  InvalidDataErr, 
+  InvalidFiletypeErr,
+  MissingAuthTokenErr,
+  MissingFieldErr,
+} = require('./customErrors');
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests created from this IP, please try again after 15 minutes."
+});
 
+// If JWT is invalid it will throw an error
+const validateAndDecodeJWT = (req, res, next) => {
+  try {
+    // Verify that both req.headers and req.headers['authorization'] exist
+    if (!req.headers) {
+      throw new MissingFieldErr('headers');
+    }
+    if (!req.headers['authorization']) {
+      throw new MissingFieldErr('headers.authorization');
+    }
 
-class ValidateAndSanitize {
-  // A class placeholder for a future refactor
-}
+    // Get the authorization field from the header
+    const authHeader = req.headers['authorization'];
+    let token;
+    try {
+      // Split the token from the word "Bearer" in the authorization header
+      token = authHeader && authHeader.split(' ')[1];
 
+      // If the token is empty throw a missing auth token error
+      if (!token) {
+        throw new MissingAuthTokenErr();
+      }
+    } catch (err) {
+      throw getErrToThrow(err, 'Failed to get token from authorization field in header')
+    }
 
+    // Finally, validate the token or throw an error
+    try {
+      jwt.verify(token, process.env.JWT_PRIVATE_KEY);
+      next();
+    } catch (err) {
+      throw new InvalidAuthTokenErr();
+    }
+  } catch (err) {
+    handleError(err, res);
+  }
+};
+
+// Create a JWT for the user
+const createJWT = (userID) => {
+  // Payload is empty in this iteration but will hold info like role in the future
+  const payload = {};
+
+  // Private key for signing JWT
+  const privateKey = process.env.JWT_PRIVATE_KEY;
+
+  // Options for the JWT through the jsonwebtoken library
+  const options = {
+    algorithm:  'RS256',
+    issuer:     'Redbird Art Portfolio Backend',
+    subject:    userID,
+    expiresIn:  '20m',
+  };
+
+  return jwt.sign(payload, privateKey, options);
+};
 
 // Compare API keys with constant time to mitigate timing attacks
 const constantTimeComparison = (comp1, comp2) => {
@@ -29,35 +93,6 @@ const constantTimeComparison = (comp1, comp2) => {
   }
 };
 
-
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: "Too many requests created from this IP, please try again after 15 minutes."
-});
-
-
-//  Validate request's api key before proceeding
-const validateAPI = (req, res, next) => {
-
-  let apiKey;
-  try {
-    apiKey = req.headers['x-api-key'];
-  } catch (err) {
-    throw new InvalidAPIKey();
-  }
-
-  try {
-    if ((!apiKey) || (!constantTimeComparison(apiKey, process.env.BACKEND_API_KEY))) {
-      throw new InvalidAPIKey();
-    }
-    next();
-  } catch (err) {
-    throw err;
-  }
-
-  return true;
-};
 
 // Returns true if no errors are thrown when validating
 // Tag names must be all lowercase and only include alphanumeric symbols and dashes
@@ -337,9 +372,10 @@ module.exports = {
   AllowedFiletypes,
   apiLimiter,
   constantTimeComparison,
+  createJWT,
   sanitizeInputForHTML,
   sanitizeFilename,
-  validateAPI,
+  validateAndDecodeJWT,
   validateEmail,
   validateTagName,
 };

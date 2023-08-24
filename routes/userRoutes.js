@@ -2,7 +2,7 @@ const express = require(`express`);
 const router = express.Router();
 const { handleError } = require('../utilities/customErrors');
 
-const { loginUser } = require('../utilities/userManagement');
+const { validateUser } = require('../utilities/userManagement');
 
 
 router.use(express.json());
@@ -10,7 +10,7 @@ router.use(express.json());
 router.post('/login', async (req, res) => {
   try {
     // Get a JSON web token if the user's credentials are valid
-    const JWT = await loginUser(req);
+    const JWT = await validateUser(req);
 
     // Set the Authorization header using the JWT
     res.header('Authorization', `Bearer ${JWT}`);

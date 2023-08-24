@@ -196,14 +196,39 @@ class GeneralAuthenticationErr extends BaseErr {
   }
 };
 
-class InvalidAPIKey extends GeneralAuthenticationErr {
+class InvalidAuthTokenErr extends GeneralAuthenticationErr {
   constructor() {
-    const errMsg = `Unauthorized. Invalid API Key`;
+    const errMsg = `Unauthorized. Invalid authentication token.`;
+    const errName = 'InvalidAuthToken'
     super(errMsg);
-    this.name = 'InvalidAPIKey';
+    this.name = errName;
 
     this.publicErrMessage = errMsg;
-    this.publicErrName = 'InvalidAPIKey';
+    this.publicErrName = errName;
+  }
+};
+
+class MissingAuthTokenErr extends GeneralAuthenticationErr {
+  constructor() {
+    const errMsg = `Unauthorized. No authentication token provided in header.`;
+    const errName = 'MissingAuthToken'
+    super(errMsg);
+    this.name = errName;
+
+    this.publicErrMessage = errMsg;
+    this.publicErrName = errName;
+  }
+};
+
+class InvalidAPIKey extends GeneralAuthenticationErr {
+  constructor() {
+    const errMsg = 'Unauthorized. Invalid API Key.';
+    const errName = 'InvalidAPIKey'
+    super(errMsg);
+    this.name = errName;
+
+    this.publicErrMessage = errMsg;
+    this.publicErrName = errName;
   }
 };
 
@@ -232,8 +257,6 @@ class InvalidPasswordErr extends GeneralAuthenticationErr {
   }
 };
 
-
-
 module.exports = {
   BaseErr,
   ClientReleaseErr,
@@ -245,11 +268,13 @@ module.exports = {
   handleError,
   getErrToThrow,
   InvalidAPIKey,
+  InvalidAuthTokenErr,
   InvalidFiletypeErr,
   InvalidDataErr,
   InvalidPasswordErr,
   InvalidUsernameErr,
   InvalidQueryErr,
+  MissingAuthTokenErr,
   MissingFieldErr,
   TransactionErr,
 };
