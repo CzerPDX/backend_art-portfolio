@@ -5,7 +5,6 @@
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const fs = require('fs/promises');
 
 const dbHandler = require('./dbHandler').dbHandlerInstance;
 const DBQuery = require('../utilities/dbHandler').DBQuery;
@@ -62,7 +61,7 @@ const createJWT = async (userEmail) => {
   const payload = {};
 
   // Private key for signing JWT
-  const privateKey = await fs.readFile('utilities/private/jwt-key', 'utf8');
+  const privateKey = process.env.JWT_PRIVATE_KEY;
 
   // Options for the JWT through the jsonwebtoken library
   const options = {
