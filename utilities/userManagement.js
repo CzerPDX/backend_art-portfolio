@@ -1,4 +1,12 @@
+/*
+  References:
+  https://www.npmjs.com/package/jsonwebtoken
+*/
+
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const fs = require('fs/promises');
+
 const dbHandler = require('./dbHandler').dbHandlerInstance;
 const DBQuery = require('../utilities/dbHandler').DBQuery;
 const { 
@@ -22,7 +30,9 @@ const hashAndSalt = async (plainTextPass) => {
 };
 
 // Validates the incoming password vs the hashed password in the database
-const validateUser = async (req) => {
+// Returns a JWT if login credentials are valid
+// Otherwise, will throw a custom error
+const loginUser = async (req) => {
 
   try {
     // Validate the request contains the required data for a login and then pull out email and password
@@ -38,13 +48,34 @@ const validateUser = async (req) => {
       throw new InvalidPasswordErr();
     }
 
-    // This part is where I will generate and return a JWT
-    return true;
+    // Return the JWT
+    return await createJWT(incomingEmail);
 
   } catch (err) {
     throw err;
   }
 };
+
+// Create a JWT for the user
+const createJWT = async (userEmail) => {
+  // Payload is empty in this iteration but will hold info like role in the future
+  const payload = {};
+
+  // Private key for signing JWT
+  const privateKey = await fs.readFile('utilities/private/jwt-key', 'utf8');
+
+  // Options for the JWT through the jsonwebtoken library
+  const options = {
+    algorithm:  'RS256',
+    issuer:     'Redbird Art Portfolio Backend',
+    subject:    userEmail,
+    expiresIn:  '20m',
+  };
+
+  return jwt.sign(payload, privateKey, options);
+};
+
+
 
 // Validate incoming login request data
 // Throws an appropriate error if anything is missing but otherwise does not return anything
@@ -104,6 +135,10 @@ const getHashedPass = async (incomingEmail) => {
 };
 
 
+
+
+
+
 module.exports = {
-  validateUser
+  loginUser
 };
