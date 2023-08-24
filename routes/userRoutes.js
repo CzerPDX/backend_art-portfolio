@@ -9,7 +9,7 @@ router.use(express.json());
 
 router.post('/login', async (req, res) => {
   try {
-    // Get a JSON web token if the user's credentials were valid
+    // Get a JSON web token if the user's credentials are valid
     const JWT = await loginUser(req);
 
     // Set the Authorization header using the JWT

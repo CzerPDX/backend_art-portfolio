@@ -17,6 +17,7 @@ const {
 } = require('./customErrors');
 
 
+
 // Hash a plain text password using bcrypt.
 // Returns the hashed password or throws an error
 const hashAndSalt = async (plainTextPass) => {
@@ -74,8 +75,6 @@ const createJWT = async (userEmail) => {
   return jwt.sign(payload, privateKey, options);
 };
 
-
-
 // Validate incoming login request data
 // Throws an appropriate error if anything is missing but otherwise does not return anything
 const validateLoginRequest = (req) => {
@@ -127,15 +126,11 @@ const getHashedPass = async (incomingEmail) => {
 
   // Validate that the row contains a key for "hashed_password"
   if (!getPasswordQuery.rows[0].hashed_password) {
-    throw new Error('No "hashed_password" key in query.rows[0]');
+    throw new ErrWrapper(err, 'No "hashed_password" key in query.rows[0]');
   }
 
   return getPasswordQuery.rows[0].hashed_password;
 };
-
-
-
-
 
 
 module.exports = {
