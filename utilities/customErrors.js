@@ -184,44 +184,97 @@ class TransactionErr extends GeneralDatabaseErr {
   }
 };
 
-class GeneralAuthenticationErr extends Error {
+class GeneralAuthenticationErr extends BaseErr {
   constructor(message) {
+    const errName = 'AuthenticationErr';
     super(message);
-    this.name = 'AuthenticationErr';
+    this.name = errName;
+
+    this.publicErrMessage = message;
+    this.publicErrName = errName;
+    this.httpCode = 401;
+  }
+};
+
+class InvalidAuthTokenErr extends GeneralAuthenticationErr {
+  constructor() {
+    const errMsg = `Unauthorized. Invalid authentication token.`;
+    const errName = 'InvalidAuthToken'
+    super(errMsg);
+    this.name = errName;
 
     this.publicErrMessage = errMsg;
-    this.publicErrName = 'AuthenticationErr';
-    this.httpCode = 401;
+    this.publicErrName = errName;
+  }
+};
+
+class MissingAuthTokenErr extends GeneralAuthenticationErr {
+  constructor() {
+    const errMsg = `Unauthorized. No authentication token provided in header.`;
+    const errName = 'MissingAuthToken'
+    super(errMsg);
+    this.name = errName;
+
+    this.publicErrMessage = errMsg;
+    this.publicErrName = errName;
   }
 };
 
 class InvalidAPIKey extends GeneralAuthenticationErr {
   constructor() {
-    const errMsg = `Unauthorized. Invalid API Key`;
+    const errMsg = 'Unauthorized. Invalid API Key.';
+    const errName = 'InvalidAPIKey'
     super(errMsg);
-    this.name = 'InvalidAPIKey';
+    this.name = errName;
 
     this.publicErrMessage = errMsg;
-    this.publicErrName = 'InvalidAPIKey';
+    this.publicErrName = errName;
   }
 };
 
+class InvalidUsernameErr extends GeneralAuthenticationErr {
+  constructor() {
+    const errMsg = 'Invalid Username';
+    const errName = 'InvalidUsername';
+    super(errMsg);
+    this.name = errName;
 
+    this.publicErrMessage = errMsg;
+    this.publicErrName = errName;
+  }
+};
+
+// Error for invalid password
+class InvalidPasswordErr extends GeneralAuthenticationErr {
+  constructor() {
+    const errMsg = 'Invalid Password';
+    const errName = 'InvalidPassword';
+    super(errMsg);
+    this.name = errName;
+
+    this.publicErrMessage = errMsg;
+    this.publicErrName = errName;
+  }
+};
 
 module.exports = {
-  getErrToThrow,
-  handleError,
   BaseErr,
+  ClientReleaseErr,
+  ConflictErr,
+  DBConnectionErr,
   ErrWrapper,
   GeneralBadRequestErr,
+  GeneralDatabaseErr,
+  handleError,
+  getErrToThrow,
+  InvalidAPIKey,
+  InvalidAuthTokenErr,
   InvalidFiletypeErr,
   InvalidDataErr,
-  GeneralDatabaseErr,
-  MissingFieldErr,
-  ConflictErr,
+  InvalidPasswordErr,
+  InvalidUsernameErr,
   InvalidQueryErr,
-  ClientReleaseErr,
-  DBConnectionErr,
+  MissingAuthTokenErr,
+  MissingFieldErr,
   TransactionErr,
-  InvalidAPIKey,
 };

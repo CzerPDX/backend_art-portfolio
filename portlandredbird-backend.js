@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const { validateAPI, apiLimiter } = require('./utilities/security');
+const { apiLimiter } = require('./utilities/security');
 const dbHandler = require('./utilities/dbHandler').dbHandlerInstance;  // Database handler singleton
 const app = express();   
 
@@ -30,8 +30,7 @@ app.all('*', (req, res, next) => {
   console.log(`${new Date().toString()}: Received ${req.method} request on ${req.path}`);
   next();
 });
-// Validate request's API key before proceeding
-app.use(validateAPI);
+
 // Use rate IP-based rate limiting
 app.use(apiLimiter);
 

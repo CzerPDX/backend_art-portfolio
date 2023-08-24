@@ -6,10 +6,12 @@ const express = require(`express`);
 const router = express.Router();
 
 require(`dotenv`).config();
+const { validateAndDecodeJWT } = require('../utilities/security');
 const { ContentManagement } = require('../utilities/contentManagement'); 
 const contentManagement = new ContentManagement();
 const { handleError } = require('../utilities/customErrors');
 
+router.use(validateAndDecodeJWT);
 
 // Remove a file from the content directory
 router.delete('/:filename', async (req, res) => {
