@@ -29,6 +29,14 @@ const constantTimeComparison = (comp1, comp2) => {
   }
 };
 
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests created from this IP, please try again after 15 minutes."
+});
+
+
 //  Validate request's api key before proceeding
 const validateAPI = (req, res, next) => {
 
@@ -77,12 +85,34 @@ const validateTagName = (tagName) => {
   return true;
 };
 
+// Validate email format for database and html
+// Returns nothing if valid. Throws error if invalid
+const validateEmail = (email) => {
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: "Too many requests created from this IP, please try again after 15 minutes."
-});
+  // Verify that email is not undefined
+  if (!email) {
+    throw new InvalidDataErr('No email provided');
+  }
+
+  // Verify that input is a string
+  if (typeof email !== 'string') {
+    throw new InvalidDataErr('Please only provide a string for email');
+  }
+
+  // Allowed characters
+  // First section before @ sign: only alphanumeric (upper and lower case) and the characters - _ . (at least 1 character)
+  // Second section: a single @ sign (exactly 1 character)
+  // Third section: alphanumeric (upper and lowercase) and the - character
+  // Fourth section: a single .
+  // Last section: only leters
+  const allowedCharsRegex = /^[a-zA-Z0-9\-_\.]+@[a-zA-Z0-9\-]+\.[a-zA-Z]+$/;
+
+  // Check the tag name against the regex pattern and throw an error if it doesn't match
+  if (!allowedCharsRegex.test(email)) {
+    throw new InvalidDataErr('Invalid characters in email');
+  }
+};
+
 
 // Sanitize input to go into database. Returns sanitized input. To be used with parameterized queries such as what is used in the pg library
 // Remove leading and trailing whitespaces
@@ -109,7 +139,7 @@ const sanitizeInputForHTML = (input) => {
     throw new InvalidDataErr('Input contains invalid characters.');
   }
 
-  // Strip whitespace
+  // Strip leading and trailing whitespace
   let sanitizedInput = input.trim();
 
   // Escape the HTML-sensitive special characters into their HTML forms
@@ -129,20 +159,20 @@ const sanitizeInputForHTML = (input) => {
   }
 
   return sanitizedInput;
-}; 
+};
 
-//Sanitize filenames
+// Sanitize filenames
 // Remove leading and trailing whitespaces
 // Check to make sure characters are valid
 const sanitizeFilename = (filename) => {
 
   // Verify that filename is not undefined
   if (!filename) {
-    throw new InvalidDataErr('No filename provided.');
+    throw new InvalidDataErr('No filename provided');
   }
 
   // Verify that input is a string
-  if (typeof filename !== "string") {
+  if (typeof filename !== 'string') {
     throw new InvalidDataErr('Please only provide a string for filename.');
   }
 
@@ -310,5 +340,6 @@ module.exports = {
   sanitizeInputForHTML,
   sanitizeFilename,
   validateAPI,
+  validateEmail,
   validateTagName,
 };

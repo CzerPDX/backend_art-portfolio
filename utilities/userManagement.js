@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 
 const dbHandler = require('./dbHandler').dbHandlerInstance;
 const DBQuery = require('../utilities/dbHandler').DBQuery;
+const { validateEmail } = require('./security');
 const { 
   ErrWrapper, 
   getErrToThrow, 
@@ -92,6 +93,13 @@ const validateLoginRequest = (req) => {
   }
   if (!incomingPass) {
     throw new MissingFieldErr('password');
+  }
+
+  // Validate email format
+  try {
+    validateEmail(incomingEmail);
+  } catch (err) {
+    throw getErrToThrow(err, 'Failed to validate email format');
   }
 };
 
