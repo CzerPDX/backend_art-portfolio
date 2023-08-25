@@ -8,6 +8,7 @@ const router = express.Router();
 // const contentManagement = require('../utilities/contentManagement');
 const ContentManagement = require('../utilities/contentManagement').ContentManagement;
 const contentManagement = new ContentManagement();
+const { handleError } = require('../utilities/customErrors');
 
 require(`dotenv`).config();
 
@@ -44,7 +45,7 @@ router.get(`/art/:tagName`, async (req, res) => {
 // Dynamic route. Get all image data that has been tagged with tagName
 router.get(`/all-filenames`, async (req, res) => {
   try {
-    res.send(await contentManagement.getAllFilenames());
+    res.send(await contentManagement.getAllImageFilenames());
   } catch (err) {
     handleError(err, res);
   }
@@ -52,7 +53,7 @@ router.get(`/all-filenames`, async (req, res) => {
 
 router.get(`/all-assocs`, async (req, res) => {
   try {
-    res.send(await contentManagement.getAllAssocs());
+    res.send(await contentManagement.getAllImageTagAssocs());
   } catch (err) {
     handleError(err, res);
   }
