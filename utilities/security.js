@@ -45,7 +45,9 @@ const validateAndDecodeJWT = (req, res, next) => {
 
     // Finally, validate the token or throw an error
     try {
-      jwt.verify(token, process.env.JWT_PRIVATE_KEY);
+      // RSA Key stored in base64 to avoid env variable issues with newlines on webhost
+      const publicKey = Buffer.from(process.env.JWT_PUBLIC_KEY, 'base64').toString('utf8');
+      jwt.verify(token, publicKey);
       next();
     } catch (err) {
       throw new InvalidAuthTokenErr();
@@ -60,9 +62,8 @@ const createJWT = (userID) => {
   // Payload is empty in this iteration but will hold info like role in the future
   const payload = {};
 
-  // Private key for signing JWT
-  const privateKey = process.env.JWT_PRIVATE_KEY;
-  console.log(`Key length: ${privateKey.length}`);
+  // Private key for signing JWT (it is kept in base64 to avoid private key issues on webserver so must be converted first)
+  const privateKey = Buffer.from(process.env.JWT_PRIVATE_KEY, 'base64').toString('utf8');
 
   // Options for the JWT through the jsonwebtoken library
   const options = {
