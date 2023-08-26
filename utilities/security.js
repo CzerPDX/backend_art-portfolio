@@ -62,6 +62,7 @@ const createJWT = (userID) => {
 
   // Private key for signing JWT
   const privateKey = process.env.JWT_PRIVATE_KEY;
+  console.log(`Key length: ${privateKey.length}`);
 
   // Options for the JWT through the jsonwebtoken library
   const options = {
