@@ -43,14 +43,14 @@ class DBHandler {
   //
   // Constructor
   constructor() {
-    this.pool = null;
+    this._pool = null;
   };
 
   // Setup the pool when called on. This is not in the constructor because the it needs to be async in the local dev environment.
   setupHandler = async () => {
     try {
-      if (!this.pool) {
-        this.pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
+      if (!this._pool) {
+        this._pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
         console.log('Pool open');
       } else {
         console.error('Error: Tried to open pool, but pool was already open.');
@@ -62,9 +62,9 @@ class DBHandler {
 
   // Close the pool and clean up the singleton when (ideally when shutting down the server)
   cleanupHandler = async () => {
-    if (this.pool) {
+    if (this._pool) {
       try {
-        this.pool.end();
+        this._pool.end();
         console.log('Pool closed')
       } catch (err) {
         throw new DBConnectionErr(`Unable to close pool: ${err.message}`);
@@ -88,7 +88,7 @@ class DBHandler {
 
     // Get a new client so it can use the db pool
     try {
-      client = await this.pool.connect();
+      client = await this._pool.connect();
     } catch (err) {
       throw new DBConnectionErr(`Unable to get new client from pool: ${err.message}`);
     }
