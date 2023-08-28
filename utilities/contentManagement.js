@@ -15,10 +15,10 @@ require(`dotenv`).config();
 // The content management class handles the functionality for uploading and deleting 
 class ContentManagement {
   constructor() {
-    this.FILE_BUCKET = require('../utilities/file-bucket-sdk');
-    this.dbHandler = require('../utilities/dbHandler').dbHandlerInstance;
-    this.easyStore = new this.FILE_BUCKET.EasyStore();
-    this.filetypeValidator = new AllowedFiletypes();
+    this._FILE_BUCKET = require('../utilities/file-bucket-sdk');
+    this._dbHandler = require('../utilities/dbHandler').dbHandlerInstance;
+    this._easyStore = new this._FILE_BUCKET.EasyStore();
+    this._filetypeValidator = new AllowedFiletypes();
   }
 
   // Public Methods (used by endpoints)
@@ -84,7 +84,7 @@ class ContentManagement {
       const allImagesQuery = new DBQuery(allImagesQueryText);
 
       // Execute the query and send the rows
-      await this.dbHandler.executeQueries([allImagesQuery]);
+      await this._dbHandler.executeQueries([allImagesQuery]);
       return allImagesQuery.rows;
 
     } catch (err) {
@@ -109,7 +109,7 @@ class ContentManagement {
       const imagesByTagNameQuery = new DBQuery(imagesByTagNameQueryText, imagesByTagNameQueryParams);
 
       // Execute the query and send the rows
-      await this.dbHandler.executeQueries([imagesByTagNameQuery]);
+      await this._dbHandler.executeQueries([imagesByTagNameQuery]);
       return imagesByTagNameQuery.rows;
 
     } catch (err) {
@@ -127,7 +127,7 @@ class ContentManagement {
       const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
 
       // Execute queries
-      await this.dbHandler.executeQueries([allFilenamesQuery]);
+      await this._dbHandler.executeQueries([allFilenamesQuery]);
 
       // Pull tag names out of object and into an array to be sent to client
       const filenames = allFilenamesQuery.rows.map(row => row.filename);
@@ -163,7 +163,7 @@ class ContentManagement {
       const removeTagQuery = new DBQuery(removeTagQueryText, removeTagQueryParams);
       
       // Execute queries
-      await this.dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
+      await this._dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to remove tag from the database`);
@@ -181,7 +181,7 @@ class ContentManagement {
       const addTagQuery = new DBQuery(addTagQueryText, addTagQueryParams);
 
       // Exercute query
-      await this.dbHandler.executeQueries([addTagQuery]);
+      await this._dbHandler.executeQueries([addTagQuery]);
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to add new tag to the database`);
@@ -200,7 +200,7 @@ class ContentManagement {
       const allTagNamesQuery = new DBQuery(allTagNamesQueryText);
 
       // Execute query
-      await this.dbHandler.executeQueries([allTagNamesQuery]);
+      await this._dbHandler.executeQueries([allTagNamesQuery]);
   
       // Parse the return data in allTagNamesQuery.rows for return to the client
       return allTagNamesQuery.rows.map(row => row.tag_name);
@@ -227,7 +227,7 @@ class ContentManagement {
       const removeAssocQuery = new DBQuery(removeAssocQueryText, removeAssocQueryParams);
 
       // Execute query
-      await this.dbHandler.executeQueries([removeAssocQuery]);
+      await this._dbHandler.executeQueries([removeAssocQuery]);
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to remove image-tag association from database for ${filename}: ${tagName}`);
@@ -248,7 +248,7 @@ class ContentManagement {
       const getAllAssocsQuery = new DBQuery(getAllAssocsQueryText);
 
       // Execute query
-      await this.dbHandler.executeQueries([getAllAssocsQuery]);
+      await this._dbHandler.executeQueries([getAllAssocsQuery]);
       return getAllAssocsQuery.rows;
 
     } catch (err) {
@@ -308,7 +308,7 @@ class ContentManagement {
       req.file.originalname = sanitizeFilename(req.file.originalname);
 
       // Validate filetype and that the filename matches the filetype
-      this.filetypeValidator.validateFiletypeAndExtension(req.file); 
+      this._filetypeValidator.validateFiletypeAndExtension(req.file); 
     } catch (err) {
       throw getErrToThrow(err, `Failed to sanitize image`);
     }
@@ -338,7 +338,7 @@ class ContentManagement {
         Body: req.file.buffer,
       };
 
-      return await this.easyStore.upload(params);
+      return await this._easyStore.upload(params);
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to upload file to bucket`);
@@ -354,7 +354,7 @@ class ContentManagement {
         Key: filename
       };
 
-      return await this.easyStore.delete(params);
+      return await this._easyStore.delete(params);
     } catch (err) {
       throw getErrToThrow(err, `Failed to remove file from bucket`);
     }
@@ -365,7 +365,7 @@ class ContentManagement {
     let incomingTagNames;     // An array of incoming tag names for the upload
     let partialErrMsg = '';   // A partial error message if upload succeeds but tagnames fail
     const queries = [];       // Array of queries
-    const bucketUrl = `${process.env.FILE_BUCKET_ENDPOINT}/${process.env.BUCKET_NAME}/${req.file.originalname}`;    // Bucket URL where the file will be located
+    const bucketUrl = `${process.env._FILE_BUCKET_ENDPOINT}/${process.env.BUCKET_NAME}/${req.file.originalname}`;    // Bucket URL where the file will be located
     let filename;             // Filename of the file being uploaded
 
     try {
@@ -428,7 +428,7 @@ class ContentManagement {
       }
 
       // Execute all the queries on the queries list
-      await this.dbHandler.executeQueries(queries);
+      await this._dbHandler.executeQueries(queries);
 
       // Send success message
       return `Successfully uploaded ${bucketUrl}.${partialErrMsg}`;
@@ -459,7 +459,7 @@ class ContentManagement {
       const removeImageQuery = new DBQuery(removeImageQueryText, removeImageQueryParams);
 
       // Execute queries
-      await this.dbHandler.executeQueries([removeAssocByFilenameQuery, removeImageQuery]);
+      await this._dbHandler.executeQueries([removeAssocByFilenameQuery, removeImageQuery]);
 
     } catch (err) {
       throw(err);
