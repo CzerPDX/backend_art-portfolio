@@ -1,7 +1,7 @@
 const express = require(`express`);
 const router = express.Router();
-const { handleError } = require('../utilities/customErrors');
 
+const { handleError } = require('../utilities/customErrors');
 const { validateUser } = require('../utilities/userManagement');
 
 

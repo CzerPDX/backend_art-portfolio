@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 
 const { 
   handleError,
-  InvalidAPIKey,
   InvalidAuthTokenErr,
   InvalidDataErr, 
   InvalidFiletypeErr,
