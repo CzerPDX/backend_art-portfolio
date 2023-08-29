@@ -15,16 +15,16 @@ require(`dotenv`).config();
 // The content management class handles the functionality for uploading and deleting 
 class ContentManagement {
   constructor() {
-    this.FILE_BUCKET = require('../utilities/file-bucket-sdk');
-    this.dbHandler = require('../utilities/dbHandler').dbHandlerInstance;
-    this.easyStore = new this.FILE_BUCKET.EasyStore();
-    this.filetypeValidator = new AllowedFiletypes();
+    this._FILE_BUCKET = require('../utilities/file-bucket-sdk');
+    this._dbHandler = require('../utilities/dbHandler').dbHandlerInstance;
+    this._easyStore = new this._FILE_BUCKET.EasyStore();
+    this._filetypeValidator = new AllowedFiletypes();
   }
 
   // Public Methods (used by endpoints)
 
   // Put a file into the file bucket and send its details to the database
-  putFile = async (req, res) => {
+  async putFile(req, res) {
     try {
       // Validate the image is valid for upload and the request has all required information
       await this.#validateImageForUpload(req, res);
@@ -47,7 +47,7 @@ class ContentManagement {
   };
 
   // Remove a file from the filebucket and remove its details from the database
-  deleteFile = async (req) => {
+  async deleteFile(req) {
 
     // Verify that req.params and req.params.filename exists
     if (!req.params) {
@@ -77,14 +77,14 @@ class ContentManagement {
 
   // Get all images in the db
   // Returns an array of all rows in the portfolio_images table
-  getAllImages = async () => {
+  async getAllImages() {
     try {
       // Set up query
       const allImagesQueryText = `SELECT * FROM portfolio_images`;
       const allImagesQuery = new DBQuery(allImagesQueryText);
 
       // Execute the query and send the rows
-      await this.dbHandler.executeQueries([allImagesQuery]);
+      await this._dbHandler.executeQueries([allImagesQuery]);
       return allImagesQuery.rows;
 
     } catch (err) {
@@ -94,7 +94,7 @@ class ContentManagement {
 
   // Get all images reated to a certain tag name in the db
   // Returns an array of portfolio_images rows matching the tagName parameter
-  getAllImagesByTag = async (tagName) => {
+  async getAllImagesByTag(tagName) {
     try {
       // Set up query text
       const imagesByTagNameQueryText = `
@@ -109,7 +109,7 @@ class ContentManagement {
       const imagesByTagNameQuery = new DBQuery(imagesByTagNameQueryText, imagesByTagNameQueryParams);
 
       // Execute the query and send the rows
-      await this.dbHandler.executeQueries([imagesByTagNameQuery]);
+      await this._dbHandler.executeQueries([imagesByTagNameQuery]);
       return imagesByTagNameQuery.rows;
 
     } catch (err) {
@@ -118,7 +118,7 @@ class ContentManagement {
   };
 
   // Returns all entries in the filenames column from the portfolio_images table
-  getAllImageFilenames = async () => {
+  async getAllImageFilenames() {
     try {
       // Set up query text
       const allFilenamesQueryText = `
@@ -127,7 +127,7 @@ class ContentManagement {
       const allFilenamesQuery = new DBQuery(allFilenamesQueryText);
 
       // Execute queries
-      await this.dbHandler.executeQueries([allFilenamesQuery]);
+      await this._dbHandler.executeQueries([allFilenamesQuery]);
 
       // Pull tag names out of object and into an array to be sent to client
       const filenames = allFilenamesQuery.rows.map(row => row.filename);
@@ -141,7 +141,7 @@ class ContentManagement {
   // Removes a tag from the portfolio_tags table
   // It will also remove related tag entries from the portfolio_image_tags_assoc table
   // If it succeeds it will return true. Failure will throw an err
-  removeImageTagFromDB = async (tagName) => {
+  async removeImageTagFromDB(tagName) {
     try {
       // Setup Queries
       // First, remove tag entries from the portfolio_image_tags_assoc table associated with tagName
@@ -163,7 +163,7 @@ class ContentManagement {
       const removeTagQuery = new DBQuery(removeTagQueryText, removeTagQueryParams);
       
       // Execute queries
-      await this.dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
+      await this._dbHandler.executeQueries([removeAssocsByTagQuery, removeTagQuery]);
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to remove tag from the database`);
@@ -171,7 +171,7 @@ class ContentManagement {
   };
 
   // Add a new tag to the portfolio_tags table for an existing image
-  addImageTagToDB = async (tagName) => {
+  async addImageTagToDB(tagName) {
     try {
       // Setup query
       const addTagQueryText = `
@@ -181,7 +181,7 @@ class ContentManagement {
       const addTagQuery = new DBQuery(addTagQueryText, addTagQueryParams);
 
       // Exercute query
-      await this.dbHandler.executeQueries([addTagQuery]);
+      await this._dbHandler.executeQueries([addTagQuery]);
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to add new tag to the database`);
@@ -190,7 +190,7 @@ class ContentManagement {
 
   // Get all current tags from the database
   // Returns an array of tag_name from the database
-  getAllTagNames = async () => {
+  async getAllTagNames() {
     // Returns all the tags currently in the database
     try {
       // Set up query
@@ -200,7 +200,7 @@ class ContentManagement {
       const allTagNamesQuery = new DBQuery(allTagNamesQueryText);
 
       // Execute query
-      await this.dbHandler.executeQueries([allTagNamesQuery]);
+      await this._dbHandler.executeQueries([allTagNamesQuery]);
   
       // Parse the return data in allTagNamesQuery.rows for return to the client
       return allTagNamesQuery.rows.map(row => row.tag_name);
@@ -211,7 +211,7 @@ class ContentManagement {
   };
 
   // Removes a filename-tag association from the assoc table
-  removeImageTagAssocFromDB = async (filename, tagName) => {
+  async removeImageTagAssocFromDB(filename, tagName) {
     try {
       // Set up query
       const removeAssocQueryText = `
@@ -227,7 +227,7 @@ class ContentManagement {
       const removeAssocQuery = new DBQuery(removeAssocQueryText, removeAssocQueryParams);
 
       // Execute query
-      await this.dbHandler.executeQueries([removeAssocQuery]);
+      await this._dbHandler.executeQueries([removeAssocQuery]);
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to remove image-tag association from database for ${filename}: ${tagName}`);
@@ -237,7 +237,7 @@ class ContentManagement {
   // Mostly used for testing
   
   // Get all assocs as an array of objects that includes filename and tagName
-  getAllImageTagAssocs = async () => {
+  async getAllImageTagAssocs() {
     try {
       // Set up query
       const getAllAssocsQueryText = `
@@ -248,7 +248,7 @@ class ContentManagement {
       const getAllAssocsQuery = new DBQuery(getAllAssocsQueryText);
 
       // Execute query
-      await this.dbHandler.executeQueries([getAllAssocsQuery]);
+      await this._dbHandler.executeQueries([getAllAssocsQuery]);
       return getAllAssocsQuery.rows;
 
     } catch (err) {
@@ -265,7 +265,7 @@ class ContentManagement {
   }).single('file');
 
   // Wrap multer's upload in a promise-based function
-  #uploadAsync = (req, res) => {
+  #uploadAsync(req, res) {
     return new Promise((resolve, reject) => {
       this.#upload(req, res, (err) => {
         if (err) {
@@ -278,7 +278,7 @@ class ContentManagement {
   };
 
   // Validate file and request details and file are valid/present before uploading
-  #validateImageForUpload = async (req, res) => {
+  async #validateImageForUpload(req, res) {
     // Users Multer to upload the file
     await this.#uploadAsync(req, res);
 
@@ -308,7 +308,7 @@ class ContentManagement {
       req.file.originalname = sanitizeFilename(req.file.originalname);
 
       // Validate filetype and that the filename matches the filetype
-      this.filetypeValidator.validateFiletypeAndExtension(req.file); 
+      this._filetypeValidator.validateFiletypeAndExtension(req.file); 
     } catch (err) {
       throw getErrToThrow(err, `Failed to sanitize image`);
     }
@@ -329,7 +329,7 @@ class ContentManagement {
   };
 
   // Send an image to the file bucket
-  #uploadImageToBucket = async (req) => {
+  async #uploadImageToBucket(req) {
     try {
       // Upload the file to the image bucket
       const params = {
@@ -338,7 +338,7 @@ class ContentManagement {
         Body: req.file.buffer,
       };
 
-      return await this.easyStore.upload(params);
+      return await this._easyStore.upload(params);
 
     } catch (err) {
       throw getErrToThrow(err, `Failed to upload file to bucket`);
@@ -346,7 +346,7 @@ class ContentManagement {
   };
 
   // Remove file from the image bucket
-  #removeImageFromBucket = async (filename) => {
+  async #removeImageFromBucket(filename) {
     try {
       // Delete the file from the image bucket
       const params = {
@@ -354,18 +354,18 @@ class ContentManagement {
         Key: filename
       };
 
-      return await this.easyStore.delete(params);
+      return await this._easyStore.delete(params);
     } catch (err) {
       throw getErrToThrow(err, `Failed to remove file from bucket`);
     }
   };
 
   // Private Database Functions
-  #sendImageDataToDB = async (req) => {
+  async #sendImageDataToDB(req) {
     let incomingTagNames;     // An array of incoming tag names for the upload
     let partialErrMsg = '';   // A partial error message if upload succeeds but tagnames fail
     const queries = [];       // Array of queries
-    const bucketUrl = `${process.env.FILE_BUCKET_ENDPOINT}/${process.env.BUCKET_NAME}/${req.file.originalname}`;    // Bucket URL where the file will be located
+    const bucketUrl = `${process.env._FILE_BUCKET_ENDPOINT}/${process.env.BUCKET_NAME}/${req.file.originalname}`;    // Bucket URL where the file will be located
     let filename;             // Filename of the file being uploaded
 
     try {
@@ -428,7 +428,7 @@ class ContentManagement {
       }
 
       // Execute all the queries on the queries list
-      await this.dbHandler.executeQueries(queries);
+      await this._dbHandler.executeQueries(queries);
 
       // Send success message
       return `Successfully uploaded ${bucketUrl}.${partialErrMsg}`;
@@ -440,7 +440,7 @@ class ContentManagement {
 
   // Removes a row from the portfolio_images table based on filename.
   // All entries for that filename are also deleted from the assoc table
-  #removeImageFromDB = async (filename) => {
+  async #removeImageFromDB(filename) {
     try {
       // Setup queries
 
@@ -459,7 +459,7 @@ class ContentManagement {
       const removeImageQuery = new DBQuery(removeImageQueryText, removeImageQueryParams);
 
       // Execute queries
-      await this.dbHandler.executeQueries([removeAssocByFilenameQuery, removeImageQuery]);
+      await this._dbHandler.executeQueries([removeAssocByFilenameQuery, removeImageQuery]);
 
     } catch (err) {
       throw(err);
@@ -471,7 +471,7 @@ class ContentManagement {
   // more than once. If new methods recreate existing queries they should be added here instead and called in both places
 
   // Add to association table
-  #addImageTagAssocQuery = (filename, tagName) => {
+  #addImageTagAssocQuery(filename, tagName) {
     try {
       const addAssocQueryText = `
       INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
@@ -485,6 +485,5 @@ class ContentManagement {
     }
   }
 }
-
 
 module.exports = { ContentManagement };
