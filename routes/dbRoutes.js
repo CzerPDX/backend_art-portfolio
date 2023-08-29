@@ -5,7 +5,6 @@
 
 const express = require(`express`);
 const router = express.Router();
-// const contentManagement = require('../utilities/contentManagement');
 const ContentManagement = require('../utilities/contentManagement').ContentManagement;
 const contentManagement = new ContentManagement();
 const { handleError } = require('../utilities/customErrors');

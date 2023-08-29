@@ -48,7 +48,6 @@ class DBHandler {
 
   // Setup the pool when called on. This is not in the constructor because the it needs to be async in the local dev environment.
   async setupHandler() {
-  // setupHandler = async () => {
     try {
       if (!this._pool) {
         this._pool = process.env.NODE_ENV === 'production' ? this.#setupProductionPool() : await this.#setupLocalPool();
@@ -63,7 +62,6 @@ class DBHandler {
 
   // Close the pool and clean up the singleton when (ideally when shutting down the server)
   async cleanupHandler() {
-  // cleanupHandler = async () => {
     if (this._pool) {
       try {
         this._pool.end();
@@ -78,7 +76,6 @@ class DBHandler {
   // Provide an array of DBQuery objects and each one will be run in that order.
   // On failure: rollback of all queries. On success updates DBQuery objects with returned rows.
   async executeQueries(dbQueries) {
-  // executeQueries = async (dbQueries) => {
     let client;
 
     if (!dbQueries) {

@@ -17,7 +17,6 @@ const {
 } = require('./customErrors');
 
 
-
 // // Hash a plain text password using bcrypt.
 // // Returns the hashed password or throws an error
 // const hashAndSalt = async (plainTextPass) => {
@@ -119,7 +118,6 @@ const getHashedPass = async (incomingEmail) => {
 
   return getPasswordQuery.rows[0].hashed_password;
 };
-
 
 module.exports = {
   validateUser,
