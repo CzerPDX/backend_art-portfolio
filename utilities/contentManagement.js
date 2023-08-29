@@ -24,7 +24,7 @@ class ContentManagement {
   // Public Methods (used by endpoints)
 
   // Put a file into the file bucket and send its details to the database
-  putFile = async (req, res) => {
+  async putFile(req, res) {
     try {
       // Validate the image is valid for upload and the request has all required information
       await this.#validateImageForUpload(req, res);
@@ -47,7 +47,7 @@ class ContentManagement {
   };
 
   // Remove a file from the filebucket and remove its details from the database
-  deleteFile = async (req) => {
+  async deleteFile(req) {
 
     // Verify that req.params and req.params.filename exists
     if (!req.params) {
@@ -77,7 +77,7 @@ class ContentManagement {
 
   // Get all images in the db
   // Returns an array of all rows in the portfolio_images table
-  getAllImages = async () => {
+  async getAllImages() {
     try {
       // Set up query
       const allImagesQueryText = `SELECT * FROM portfolio_images`;
@@ -94,7 +94,7 @@ class ContentManagement {
 
   // Get all images reated to a certain tag name in the db
   // Returns an array of portfolio_images rows matching the tagName parameter
-  getAllImagesByTag = async (tagName) => {
+  async getAllImagesByTag(tagName) {
     try {
       // Set up query text
       const imagesByTagNameQueryText = `
@@ -118,7 +118,7 @@ class ContentManagement {
   };
 
   // Returns all entries in the filenames column from the portfolio_images table
-  getAllImageFilenames = async () => {
+  async getAllImageFilenames() {
     try {
       // Set up query text
       const allFilenamesQueryText = `
@@ -141,7 +141,7 @@ class ContentManagement {
   // Removes a tag from the portfolio_tags table
   // It will also remove related tag entries from the portfolio_image_tags_assoc table
   // If it succeeds it will return true. Failure will throw an err
-  removeImageTagFromDB = async (tagName) => {
+  async removeImageTagFromDB(tagName) {
     try {
       // Setup Queries
       // First, remove tag entries from the portfolio_image_tags_assoc table associated with tagName
@@ -171,7 +171,7 @@ class ContentManagement {
   };
 
   // Add a new tag to the portfolio_tags table for an existing image
-  addImageTagToDB = async (tagName) => {
+  async addImageTagToDB(tagName) {
     try {
       // Setup query
       const addTagQueryText = `
@@ -190,7 +190,7 @@ class ContentManagement {
 
   // Get all current tags from the database
   // Returns an array of tag_name from the database
-  getAllTagNames = async () => {
+  async getAllTagNames() {
     // Returns all the tags currently in the database
     try {
       // Set up query
@@ -211,7 +211,7 @@ class ContentManagement {
   };
 
   // Removes a filename-tag association from the assoc table
-  removeImageTagAssocFromDB = async (filename, tagName) => {
+  async removeImageTagAssocFromDB(filename, tagName) {
     try {
       // Set up query
       const removeAssocQueryText = `
@@ -237,7 +237,7 @@ class ContentManagement {
   // Mostly used for testing
   
   // Get all assocs as an array of objects that includes filename and tagName
-  getAllImageTagAssocs = async () => {
+  async getAllImageTagAssocs() {
     try {
       // Set up query
       const getAllAssocsQueryText = `
@@ -265,7 +265,7 @@ class ContentManagement {
   }).single('file');
 
   // Wrap multer's upload in a promise-based function
-  #uploadAsync = (req, res) => {
+  #uploadAsync(req, res) {
     return new Promise((resolve, reject) => {
       this.#upload(req, res, (err) => {
         if (err) {
@@ -278,7 +278,7 @@ class ContentManagement {
   };
 
   // Validate file and request details and file are valid/present before uploading
-  #validateImageForUpload = async (req, res) => {
+  async #validateImageForUpload(req, res) {
     // Users Multer to upload the file
     await this.#uploadAsync(req, res);
 
@@ -329,7 +329,7 @@ class ContentManagement {
   };
 
   // Send an image to the file bucket
-  #uploadImageToBucket = async (req) => {
+  async #uploadImageToBucket(req) {
     try {
       // Upload the file to the image bucket
       const params = {
@@ -346,7 +346,7 @@ class ContentManagement {
   };
 
   // Remove file from the image bucket
-  #removeImageFromBucket = async (filename) => {
+  async #removeImageFromBucket(filename) {
     try {
       // Delete the file from the image bucket
       const params = {
@@ -361,7 +361,7 @@ class ContentManagement {
   };
 
   // Private Database Functions
-  #sendImageDataToDB = async (req) => {
+  async #sendImageDataToDB(req) {
     let incomingTagNames;     // An array of incoming tag names for the upload
     let partialErrMsg = '';   // A partial error message if upload succeeds but tagnames fail
     const queries = [];       // Array of queries
@@ -440,7 +440,7 @@ class ContentManagement {
 
   // Removes a row from the portfolio_images table based on filename.
   // All entries for that filename are also deleted from the assoc table
-  #removeImageFromDB = async (filename) => {
+  async #removeImageFromDB(filename) {
     try {
       // Setup queries
 
@@ -471,7 +471,7 @@ class ContentManagement {
   // more than once. If new methods recreate existing queries they should be added here instead and called in both places
 
   // Add to association table
-  #addImageTagAssocQuery = (filename, tagName) => {
+  #addImageTagAssocQuery(filename, tagName) {
     try {
       const addAssocQueryText = `
       INSERT INTO portfolio_image_tags_assoc (filename, tag_id)
@@ -485,6 +485,5 @@ class ContentManagement {
     }
   }
 }
-
 
 module.exports = { ContentManagement };
