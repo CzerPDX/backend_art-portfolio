@@ -149,7 +149,7 @@ class DBHandler {
   // Private Methods
 
   // Set up a local database pool using SSH into webhosting server
-  #setupLocalPool = () => {
+  #setupLocalPool() {
     return new Promise(async (resolve, reject) => {
       
       // Set up the SSH tunnel options
@@ -204,7 +204,7 @@ class DBHandler {
   };
 
   // Set up a database pool for production on webhost server
-  #setupProductionPool = () => {
+  #setupProductionPool() {
     try {
       return new Pool({
         user:       process.env.DB_UN,
